@@ -1,0 +1,19 @@
+[package]
+name = "gently-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cryptographic core for GentlyOS - XOR split-knowledge security"
+
+[dependencies]
+sha2.workspace = true
+hmac.workspace = true
+hkdf.workspace = true
+rand.workspace = true
+zeroize = { version = "1.3", features = ["zeroize_derive"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+hex = "0.4"
+base64 = "0.21"

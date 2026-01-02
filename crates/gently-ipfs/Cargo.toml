@@ -1,0 +1,30 @@
+[package]
+name = "gently-ipfs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IPFS operations for GentlyOS - they spend, we gather"
+
+[dependencies]
+gently-core.workspace = true
+
+# IPFS
+ipfs-api-backend-hyper = "0.6"
+cid = "0.11"
+multihash = "0.19"
+
+# Async
+tokio.workspace = true
+futures = "0.3"
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+anyhow.workspace = true
+thiserror = "1.0"
+tracing = "0.1"
+base64 = "0.21"
+dirs.workspace = true
+chrono.workspace = true

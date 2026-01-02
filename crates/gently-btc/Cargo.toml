@@ -1,0 +1,16 @@
+[package]
+name = "gently-btc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Bitcoin block monitor for GentlyOS - entropy source and triggers"
+
+[dependencies]
+gently-core.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rand.workspace = true
+sha2.workspace = true
+# bitcoin.workspace = true  # Uncomment for full BTC support

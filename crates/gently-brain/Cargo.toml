@@ -1,0 +1,38 @@
+[package]
+name = "gently-brain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Local Llama 1B + Embedder for GentlyOS - the growing brain"
+
+[dependencies]
+gently-core.workspace = true
+gently-search.workspace = true
+
+# GGUF/ONNX inference
+ort = { version = "2.0", features = ["load-dynamic"] }  # ONNX Runtime
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio.workspace = true
+
+# Utilities
+anyhow.workspace = true
+thiserror = "1.0"
+tracing = "0.1"
+
+# HTTP for model downloads
+reqwest = { version = "0.11", features = ["stream"] }
+indicatif = "0.17"  # Progress bars
+
+# Claude API
+ureq = { version = "2.9", features = ["json"] }
+chrono.workspace = true
+uuid.workspace = true
+
+[features]
+default = []
+cuda = []  # Optional CUDA acceleration

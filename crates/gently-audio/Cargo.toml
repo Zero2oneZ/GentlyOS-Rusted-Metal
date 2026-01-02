@@ -1,0 +1,12 @@
+[package]
+name = "gently-audio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Dual-mode audio engine for GentlyOS (audible + ultrasonic)"
+
+[dependencies]
+gently-core.workspace = true
+thiserror.workspace = true
+rustfft = "6.1"
+# cpal.workspace = true  # Uncomment when building with audio support

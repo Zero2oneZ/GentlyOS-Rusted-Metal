@@ -1,0 +1,117 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gently-core",
+    "crates/gently-btc",
+    "crates/gently-spl",
+    "crates/gently-dance",
+    "crates/gently-audio",
+    "crates/gently-visual",
+    "crates/gently-feed",
+    "crates/gently-search",
+    "crates/gently-mcp",
+    "crates/gently-architect",
+    "crates/gently-brain",
+    "crates/gently-network",
+    "crates/gently-ipfs",
+    "crates/gently-cipher",
+    "crates/gently-sploit",
+    "gently-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/gentlyos/gentlyos"
+
+[workspace.dependencies]
+# Crypto
+sha2 = "0.10"
+hmac = "0.12"
+hkdf = "0.12"
+rand = "0.8"
+zeroize = { version = "=1.3.0", features = ["zeroize_derive"] }
+
+# Audio
+cpal = "0.15"
+dasp = "0.11"
+rustfft = "6.1"
+
+# Visual
+svg = "0.17"
+
+# Blockchain
+bitcoin = "0.31"
+solana-sdk = "1.17"
+solana-client = "1.17"
+
+# Async
+tokio = { version = "1.35", features = ["full"] }
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+crossterm = "0.27"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Internal crates
+gently-core = { path = "crates/gently-core" }
+gently-btc = { path = "crates/gently-btc" }
+gently-spl = { path = "crates/gently-spl" }
+gently-dance = { path = "crates/gently-dance" }
+gently-audio = { path = "crates/gently-audio" }
+gently-visual = { path = "crates/gently-visual" }
+gently-feed = { path = "crates/gently-feed" }
+gently-search = { path = "crates/gently-search" }
+gently-mcp = { path = "crates/gently-mcp" }
+gently-architect = { path = "crates/gently-architect" }
+gently-brain = { path = "crates/gently-brain" }
+gently-network = { path = "crates/gently-network" }
+gently-ipfs = { path = "crates/gently-ipfs" }
+gently-cipher = { path = "crates/gently-cipher" }
+gently-sploit = { path = "crates/gently-sploit" }
+
+# Additional dependencies for new crates
+ipfs-api-backend-hyper = "0.6"
+cid = "0.11"
+multihash = "0.19"
+futures = "0.3"
+base64 = "0.21"
+serde_yaml = "0.9"
+ort = { version = "2.0", features = ["load-dynamic"] }
+dirs = "5.0"
+indicatif = "0.17"
+reqwest = { version = "0.11", features = ["stream"] }
+ratatui = "0.28"
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.7", features = ["v4", "serde"] }
+regex = "1.10"
+jsonrpc-core = "18"
+tokio-tungstenite = "0.21"
+
+# Cipher dependencies
+sha1 = "0.10"
+md-5 = "0.10"
+md4 = "0.10"
+bs58 = "0.5"
+lazy_static = "1.4"
+hex = "0.4"
+
+# Network security dependencies
+pcap = "1.1"
+pnet = "0.34"
+httparse = "1.8"
+rustls = "0.22"
+rcgen = "0.12"
+hyper = { version = "1.1", features = ["full"] }
+hyper-util = "0.1"
+http-body-util = "0.1"
+trust-dns-resolver = "0.23"

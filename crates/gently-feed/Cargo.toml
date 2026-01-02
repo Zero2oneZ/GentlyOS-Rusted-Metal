@@ -1,0 +1,30 @@
+[package]
+name = "gently-feed"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Living Feed - Self-tracking context system with charge/decay mechanics"
+
+[dependencies]
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# IDs
+uuid = { version = "1.7", features = ["v4", "serde"] }
+
+# Pattern matching
+regex = "1.10"
+
+# Error handling
+thiserror = { workspace = true }
+
+# Core (for XOR chain integration)
+gently-core = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"

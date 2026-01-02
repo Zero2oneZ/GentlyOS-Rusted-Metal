@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  gently:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gentlyos
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # MCP server
+      - "8080:8080"  # Health/metrics
+    volumes:
+      - gently-blobs:/data/blobs
+      - gently-genesis:/data/genesis
+      - gently-knowledge:/data/knowledge
+      - gently-ipfs:/data/ipfs
+    environment:
+      - GENTLY_DATA_DIR=/data
+      - GENTLY_LOG_LEVEL=info
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      - ipfs
+    networks:
+      - gently-net
+    healthcheck:
+      test: ["CMD", "gently", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: gentlyos-ipfs
+    restart: unless-stopped
+    ports:
+      - "4001:4001"   # Swarm
+      - "5001:5001"   # API
+      - "8081:8080"   # Gateway
+    volumes:
+      - ipfs-data:/data/ipfs
+    environment:
+      - IPFS_PROFILE=server
+    networks:
+      - gently-net
+
+volumes:
+  gently-blobs:
+    driver: local
+  gently-genesis:
+    driver: local
+  gently-knowledge:
+    driver: local
+  gently-ipfs:
+    driver: local
+  ipfs-data:
+    driver: local
+
+networks:
+  gently-net:
+    driver: bridge

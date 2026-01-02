@@ -1,0 +1,18 @@
+# DISABLED - PyO3 doesn't support musl-linux
+# To enable on glibc systems, rename to Cargo.toml
+
+[package]
+name = "gently-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Python bindings for GentlyOS cryptographic primitives"
+
+[lib]
+name = "gently"
+crate-type = ["cdylib"]
+
+[dependencies]
+gently-core.workspace = true
+gently-visual.workspace = true
+pyo3 = { version = "0.20", features = ["extension-module"] }

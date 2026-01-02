@@ -1,0 +1,28 @@
+[package]
+name = "gently-cipher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cipher-Mesh: Cipher identification, encoding/decoding, cryptanalysis toolkit"
+
+[dependencies]
+gently-core.workspace = true
+
+# Crypto primitives
+sha2.workspace = true
+sha1 = "0.10"
+md-5 = "0.10"
+md4 = "0.10"
+base64.workspace = true
+hex = "0.4"
+bs58 = "0.5"
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+anyhow.workspace = true
+thiserror = "1.0"
+regex.workspace = true
+lazy_static = "1.4"

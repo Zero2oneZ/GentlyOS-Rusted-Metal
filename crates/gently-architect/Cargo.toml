@@ -1,0 +1,31 @@
+[package]
+name = "gently-architect"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Idea crystallization engine for GentlyOS - track ideas before code"
+
+[dependencies]
+gently-core.workspace = true
+gently-search.workspace = true
+gently-feed.workspace = true
+
+# TUI
+ratatui = "0.28"
+crossterm = "0.28"
+
+# Storage
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# SVG export
+svg = "0.17"
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+uuid.workspace = true
+chrono.workspace = true
+anyhow.workspace = true
+thiserror = "1.0"

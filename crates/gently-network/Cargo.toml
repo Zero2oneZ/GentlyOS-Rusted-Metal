@@ -1,0 +1,35 @@
+[package]
+name = "gently-network"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Network security visualization for GentlyOS - purple/green/aqua cyberpunk"
+
+[dependencies]
+gently-core.workspace = true
+
+# TUI
+ratatui = "0.28"
+crossterm = "0.28"
+
+# SVG
+svg = "0.17"
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+anyhow.workspace = true
+thiserror = "1.0"
+chrono.workspace = true
+regex.workspace = true
+
+# HTTP parsing
+httparse = "1.8"
+base64.workspace = true
+hex.workspace = true
+
+# Async HTTP for Repeater
+reqwest = { version = "0.11", features = ["stream"] }
+tokio.workspace = true
