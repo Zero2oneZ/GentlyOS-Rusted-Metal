@@ -1,0 +1,42 @@
+[package]
+name = "gently-security"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Security Layer - Token distilling, rate limiting, threat detection"
+
+[dependencies]
+# Internal crates
+gently-core.workspace = true
+gently-cipher.workspace = true
+gently-network.workspace = true
+gently-gateway.workspace = true
+
+# Async runtime
+tokio.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Crypto
+sha2.workspace = true
+regex.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror = "1.0"
+tracing.workspace = true
+
+# Async
+async-trait.workspace = true
+
+# Encoding
+hex.workspace = true
+
+# Time and IDs
+chrono.workspace = true
+uuid.workspace = true
+
+[features]
+default = []

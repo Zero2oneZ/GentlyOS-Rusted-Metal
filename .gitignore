@@ -1,1 +1,9 @@
 target/
+*.credentials*
+.claude*
+*.json.backup
+scripts/venv/
+venv/
+__pycache__/
+*.pyc
+target/

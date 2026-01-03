@@ -29,7 +29,13 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libpcap0.8 \
+    curl \
+    jq \
+    git \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure /bin/sh exists (for shell scripts)
+RUN ln -sf /bin/bash /bin/sh
 
 # Create gently user
 RUN useradd -m -s /bin/bash gently
@@ -53,6 +59,7 @@ ENV GENTLY_DATA_DIR=/data
 ENV GENTLY_BLOB_DIR=/data/blobs
 ENV GENTLY_LOG_LEVEL=info
 ENV RUST_LOG=info
+ENV SHELL=/bin/bash
 
 # Ports
 # 3000 - MCP server

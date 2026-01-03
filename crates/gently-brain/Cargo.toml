@@ -10,9 +10,8 @@ gently-core.workspace = true
 gently-search.workspace = true
 
 # GGUF/ONNX inference
-ort = { version = "2.0", features = ["load-dynamic"] }  # ONNX Runtime
-
 # Serialization
+ort = { version = "=2.0.0-rc.10", features = ["load-dynamic"] }  # ONNX Runtime 2.0
 serde.workspace = true
 serde_json.workspace = true
 
@@ -32,6 +31,7 @@ indicatif = "0.17"  # Progress bars
 ureq = { version = "2.9", features = ["json"] }
 chrono.workspace = true
 uuid.workspace = true
+hex.workspace = true
 
 [features]
 default = []

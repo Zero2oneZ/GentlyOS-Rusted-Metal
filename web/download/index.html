@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download GentlyOS</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --border: #2a2a2a;
+            --text: #e0e0e0;
+            --muted: #888;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .tagline {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+
+        .version {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .downloads {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 3rem 0;
+        }
+
+        .download-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        .download-card:hover {
+            border-color: var(--accent);
+        }
+
+        .download-card h3 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .download-card .description {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .download-card .size {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent-dim);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .checksums {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .checksums code {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--muted);
+            word-break: break-all;
+            margin-top: 0.5rem;
+        }
+
+        .install-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .install-section h2 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            color: var(--accent);
+        }
+
+        .editions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 900px) {
+            .editions {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .edition {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .edition h3 {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .edition .price {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .edition ul {
+            list-style: none;
+            text-align: left;
+            margin: 1rem 0;
+        }
+
+        .edition li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .edition li::before {
+            content: "✓ ";
+            color: var(--accent);
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">GentlyOS</div>
+            <p class="tagline">Content-Addressable Security Operating System</p>
+            <span class="version">v1.1.1</span>
+        </header>
+
+        <section class="editions">
+            <div class="edition">
+                <h3>Home</h3>
+                <div class="price">Free</div>
+                <ul>
+                    <li>Personal security suite</li>
+                    <li>LAN protection</li>
+                    <li>Bluetooth firewall</li>
+                    <li>Smart device protection</li>
+                    <li>Local AI assistant</li>
+                </ul>
+                <a href="#downloads" class="btn">Download</a>
+            </div>
+
+            <div class="edition">
+                <h3>Business</h3>
+                <div class="price">$29/mo</div>
+                <ul>
+                    <li>Everything in Home</li>
+                    <li>Financial security defaults</li>
+                    <li>Multi-user management</li>
+                    <li>API access controls</li>
+                    <li>Compliance logging</li>
+                    <li>Priority support</li>
+                </ul>
+                <a href="#contact" class="btn">Contact Sales</a>
+            </div>
+
+            <div class="edition">
+                <h3>Studio</h3>
+                <div class="price">$99/mo</div>
+                <ul>
+                    <li>Everything in Business</li>
+                    <li>NVIDIA CUDA support</li>
+                    <li>PyTorch integration</li>
+                    <li>Stable Diffusion ready</li>
+                    <li>GPU farming protection</li>
+                    <li>AI workload isolation</li>
+                </ul>
+                <a href="#contact" class="btn">Contact Sales</a>
+            </div>
+        </section>
+
+        <section id="downloads" class="downloads">
+            <div class="download-card">
+                <h3>🐧 Linux (DEB)</h3>
+                <p class="description">Ubuntu, Debian, Pop!_OS, Linux Mint</p>
+                <p class="size">~15 MB</p>
+                <a href="/releases/gentlyos_1.1.1_amd64.deb" class="btn">Download .deb</a>
+                <div class="checksums">
+                    <a href="/releases/gentlyos_1.1.1_amd64.deb.sha256" class="btn-secondary btn">SHA256</a>
+                </div>
+            </div>
+
+            <div class="download-card">
+                <h3>🐳 Docker</h3>
+                <p class="description">Run anywhere Docker runs</p>
+                <p class="size">~50 MB compressed</p>
+                <a href="/releases/gentlyos-1.1.1-docker.tar.gz" class="btn">Download Image</a>
+                <div class="code-block">
+                    <code>docker pull ghcr.io/gentlyos/gentlyos:1.1.1</code>
+                </div>
+            </div>
+
+            <div class="download-card">
+                <h3>💿 Live ISO</h3>
+                <p class="description">Bootable USB - Kali-style live system</p>
+                <p class="size">~800 MB</p>
+                <a href="/releases/gentlyos-1.1.1-amd64.iso" class="btn">Download ISO</a>
+                <div class="checksums">
+                    <a href="/releases/gentlyos-1.1.1-amd64.iso.sha256" class="btn-secondary btn">SHA256</a>
+                </div>
+            </div>
+
+            <div class="download-card">
+                <h3>📦 VirtualBox</h3>
+                <p class="description">Ready-to-import virtual appliance</p>
+                <p class="size">~2 GB</p>
+                <a href="/releases/gentlyos-1.1.1.ova" class="btn">Download OVA</a>
+                <div class="checksums">
+                    <a href="/releases/gentlyos-1.1.1.ova.sha256" class="btn-secondary btn">SHA256</a>
+                </div>
+            </div>
+
+            <div class="download-card">
+                <h3>📱 Android (Termux)</h3>
+                <p class="description">Security on your phone</p>
+                <p class="size">~20 MB</p>
+                <a href="/releases/gentlyos_1.1.1_termux_aarch64.deb" class="btn">Download</a>
+                <div class="code-block">
+                    <code>curl -sL https://gentlyos.com/install-termux.sh | bash</code>
+                </div>
+            </div>
+
+            <div class="download-card">
+                <h3>🔧 Source</h3>
+                <p class="description">Build from source (Rust)</p>
+                <p class="size">~28,000 lines</p>
+                <a href="https://github.com/gentlyos/gentlyos" class="btn">GitHub</a>
+                <div class="code-block">
+                    <code>cargo install --git https://github.com/gentlyos/gentlyos</code>
+                </div>
+            </div>
+        </section>
+
+        <section class="install-section">
+            <h2>Quick Install</h2>
+
+            <h3>Linux (Ubuntu/Debian)</h3>
+            <div class="code-block">
+                <code>curl -fsSL https://gentlyos.com/install.sh | sudo bash</code>
+            </div>
+
+            <h3>Docker</h3>
+            <div class="code-block">
+                <code>docker run -d --name gentlyos -p 3000:3000 -p 8080:8080 ghcr.io/gentlyos/gentlyos:1.1.1</code>
+            </div>
+
+            <h3>From Source</h3>
+            <div class="code-block">
+                <code>git clone https://github.com/gentlyos/gentlyos && cd gentlyos && cargo build --release</code>
+            </div>
+        </section>
+
+        <section class="install-section">
+            <h2>System Requirements</h2>
+            <ul style="list-style: none;">
+                <li>• <strong>CPU:</strong> x86_64 or ARM64</li>
+                <li>• <strong>RAM:</strong> 512 MB minimum (2 GB recommended for local AI)</li>
+                <li>• <strong>Storage:</strong> 100 MB + data</li>
+                <li>• <strong>OS:</strong> Linux, macOS, Windows (WSL2), Android (Termux)</li>
+                <li>• <strong>Network:</strong> Optional (works offline)</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>GentlyOS is open source software.</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://github.com/gentlyos/gentlyos" style="color: var(--accent);">GitHub</a> •
+                <a href="/docs" style="color: var(--accent);">Documentation</a> •
+                <a href="/security" style="color: var(--accent);">Security</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -26,6 +26,16 @@ pub const TAG_TIMESTAMP: u16 = 0x0103;
 pub const TAG_SIGNATURE: u16 = 0x0104;
 pub const TAG_BRANCH_HEAD: u16 = 0x0105;
 
+// BTC-anchored interaction tags
+pub const TAG_PROMPT: u16 = 0x0200;
+pub const TAG_RESPONSE: u16 = 0x0201;
+pub const TAG_PROMPT_HASH: u16 = 0x0202;
+pub const TAG_RESPONSE_HASH: u16 = 0x0203;
+pub const TAG_CHAIN_HASH: u16 = 0x0204;
+pub const TAG_BTC_HEIGHT: u16 = 0x0205;
+pub const TAG_BTC_HASH: u16 = 0x0206;
+pub const TAG_SESSION_ID: u16 = 0x0207;
+
 /// Commit metadata (stored as JSON blob)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitMeta {
@@ -33,6 +43,27 @@ pub struct CommitMeta {
     pub author: String,
     pub timestamp: u64,
     pub branch: String,
+}
+
+/// Interaction metadata for BTC-anchored commits
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InteractionMeta {
+    /// Session ID
+    pub session_id: String,
+    /// Interaction index within session
+    pub index: usize,
+    /// Prompt hash
+    pub prompt_hash: String,
+    /// Response hash
+    pub response_hash: String,
+    /// Chain hash: SHA256(prev + prompt_hash + response_hash)
+    pub chain_hash: String,
+    /// BTC block height
+    pub btc_height: u64,
+    /// BTC block hash
+    pub btc_hash: String,
+    /// Timestamp
+    pub timestamp: u64,
 }
 
 /// Branch info
@@ -190,6 +221,160 @@ impl GitChain {
     /// Current branch name
     pub fn current_branch(&self) -> &str {
         &self.current
+    }
+
+    /// Commit an interaction with BTC anchoring
+    ///
+    /// Creates a commit on a session-specific branch with:
+    /// - Prompt and response stored as blobs
+    /// - Hash chain linking to previous interactions
+    /// - BTC block anchor for immutable timestamping
+    pub fn commit_interaction(
+        &mut self,
+        session_id: &str,
+        index: usize,
+        prompt: &str,
+        response: &str,
+        prev_chain_hash: &str,
+        btc_height: u64,
+        btc_hash: &str,
+    ) -> Hash {
+        use sha2::{Sha256, Digest};
+
+        // Compute hashes
+        let prompt_hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(prompt.as_bytes());
+            hex::encode(hasher.finalize())
+        };
+
+        let response_hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(response.as_bytes());
+            hex::encode(hasher.finalize())
+        };
+
+        // Compute chain hash: SHA256(prev + prompt_hash + response_hash)
+        let chain_hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(prev_chain_hash.as_bytes());
+            hasher.update(prompt_hash.as_bytes());
+            hasher.update(response_hash.as_bytes());
+            hex::encode(hasher.finalize())
+        };
+
+        // Create branch for session if needed (btc_height % 7 + 1)
+        let branch_num = (btc_height % 7) + 1;
+        let branch_name = format!("session-{}-branch-{}", session_id, branch_num);
+
+        if !self.branches.contains_key(&branch_name) {
+            if let Some(head) = self.head() {
+                self.branches.insert(branch_name.clone(), head);
+            } else {
+                // Initialize if no head
+                self.init("gently");
+                if let Some(head) = self.head() {
+                    self.branches.insert(branch_name.clone(), head);
+                }
+            }
+        }
+
+        // Switch to session branch
+        let prev_branch = self.current.clone();
+        self.current = branch_name.clone();
+
+        // Store prompt and response as blobs
+        let prompt_blob = Blob::new(Kind::Text, prompt.as_bytes().to_vec());
+        let prompt_hash_blob = self.store.put(prompt_blob);
+
+        let response_blob = Blob::new(Kind::Text, response.as_bytes().to_vec());
+        let response_hash_blob = self.store.put(response_blob);
+
+        // Create interaction metadata
+        let meta = InteractionMeta {
+            session_id: session_id.to_string(),
+            index,
+            prompt_hash: prompt_hash.clone(),
+            response_hash: response_hash.clone(),
+            chain_hash: chain_hash.clone(),
+            btc_height,
+            btc_hash: btc_hash.to_string(),
+            timestamp: now(),
+        };
+
+        let meta_blob = Blob::new(Kind::Json, serde_json::to_vec(&meta).unwrap());
+        let meta_hash = self.store.put(meta_blob);
+
+        // Build interaction tree
+        let mut tree = Manifest::new();
+        tree.add(TAG_PROMPT, prompt_hash_blob);
+        tree.add(TAG_RESPONSE, response_hash_blob);
+
+        // Commit with interaction-specific message
+        let message = format!(
+            "interaction:{}:{}:btc-{}",
+            session_id, index, btc_height
+        );
+
+        let parent = self.branches.get(&self.current).copied();
+
+        let commit_meta = CommitMeta {
+            message: message.clone(),
+            author: "gently".to_string(),
+            timestamp: now(),
+            branch: branch_name.clone(),
+        };
+
+        // Store tree
+        let tree_hash = self.store.put(tree.to_blob());
+
+        // Store commit meta
+        let commit_meta_blob = Blob::new(Kind::Json, serde_json::to_vec(&commit_meta).unwrap());
+        let commit_meta_hash = self.store.put(commit_meta_blob);
+
+        // Build commit manifest
+        let mut commit = Manifest::new();
+        commit.add(TAG_TREE, tree_hash);
+        commit.add(TAG_MESSAGE, commit_meta_hash);
+        if let Some(p) = parent {
+            commit.add(TAG_PARENT, p);
+        }
+
+        let commit_hash = self.store.put(commit.to_blob());
+        self.branches.insert(branch_name, commit_hash);
+
+        // Restore previous branch
+        self.current = prev_branch;
+
+        commit_hash
+    }
+
+    /// Get interaction metadata from a commit
+    pub fn interaction_meta(&self, commit: &Hash) -> Option<InteractionMeta> {
+        let blob = self.store.get(commit)?;
+        let manifest = Manifest::from_blob(blob)?;
+        let tree_hash = manifest.get(TAG_TREE)?;
+        let tree_blob = self.store.get(&tree_hash)?;
+        let tree = Manifest::from_blob(tree_blob)?;
+
+        // The meta is stored in the message tag
+        let meta_hash = manifest.get(TAG_MESSAGE)?;
+        let meta_blob = self.store.get(&meta_hash)?;
+
+        // Try to parse as InteractionMeta first
+        if let Ok(meta) = serde_json::from_slice::<InteractionMeta>(&meta_blob.data) {
+            return Some(meta);
+        }
+
+        None
+    }
+
+    /// List all session branches
+    pub fn session_branches(&self) -> Vec<Branch> {
+        self.branches.iter()
+            .filter(|(name, _)| name.starts_with("session-"))
+            .map(|(name, head)| Branch { name: name.clone(), head: *head })
+            .collect()
     }
 
     /// Store arbitrary blob

@@ -4,6 +4,7 @@
 //! - **Entropy**: Block hashes provide unpredictable randomness
 //! - **Timestamps**: Global witness of when events occurred
 //! - **Triggers**: Block height activates key rotation and SPL swaps
+//! - **Audit Anchoring**: Immutable timestamps for audit chain
 //!
 //! ## Why Bitcoin?
 //!
@@ -11,6 +12,26 @@
 //! - Global: Everyone sees the same chain
 //! - Timestamped: Provable ordering of events
 //! - Immutable: Can't backdate or alter history
+//!
+//! ## Usage
+//!
+//! ```ignore
+//! use gently_btc::{BtcFetcher, BtcAnchor};
+//!
+//! let fetcher = BtcFetcher::new();
+//! let block = fetcher.fetch_latest().await?;
+//! let anchor = BtcAnchor::new(&block, "session_123");
+//! ```
+
+pub mod fetcher;
+pub mod audit;
+
+pub use fetcher::{BtcFetcher, BtcBlock, BtcAnchor, FetcherStats};
+pub use audit::{
+    AuditChain, AuditSession, AuditStats,
+    SessionState, SessionSummary,
+    InteractionRecord, ChainVerification,
+};
 
 use tokio::sync::broadcast;
 

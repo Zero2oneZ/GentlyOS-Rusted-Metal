@@ -31,12 +31,39 @@ pub struct DaemonHandle {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DaemonType {
+    // Knowledge daemons
     VectorChain,     // Continuously processes embeddings
     IpfsSync,        // Syncs knowledge to IPFS
     GitBranch,       // Manages knowledge branches
     KnowledgeGraph,  // Updates the knowledge graph
     Awareness,       // The awareness/consciousness loop
     Inference,       // Background inference processing
+
+    // Security daemons - Layer 1 (Foundation)
+    HashChainValidator,   // Validates audit chain integrity
+    BtcAnchor,            // Periodic BTC block anchoring
+    ForensicLogger,       // Detailed forensic logging
+
+    // Security daemons - Layer 2 (Traffic Analysis)
+    TrafficSentinel,      // Monitors request patterns
+    TokenWatchdog,        // Watches for token leakage
+    CostGuardian,         // Monitors API costs
+
+    // Security daemons - Layer 3 (Threat Detection)
+    PromptAnalyzer,       // Injection/jailbreak detection
+    BehaviorProfiler,     // Builds behavioral baselines
+    PatternMatcher,       // Matches known attack patterns
+    AnomalyDetector,      // Detects behavioral anomalies
+
+    // Security daemons - Layer 4 (Active Defense)
+    SessionIsolator,      // Isolates suspicious sessions
+    TarpitController,     // Slows down attackers
+    ResponseMutator,      // Adds noise to attacker responses
+    RateLimitEnforcer,    // Enforces rate limits
+
+    // Security daemons - Layer 5 (Threat Intelligence)
+    ThreatIntelCollector, // Gathers threat intelligence
+    SwarmDefense,         // Coordinates with other nodes
 }
 
 #[derive(Debug, Clone)]
@@ -61,15 +88,45 @@ pub struct DaemonMetrics {
 /// Events emitted by daemons
 #[derive(Debug, Clone)]
 pub enum DaemonEvent {
+    // Lifecycle events
     Started { daemon: String },
     Stopped { daemon: String },
     Cycle { daemon: String, cycle: u64 },
     Error { daemon: String, error: String },
+
+    // Knowledge events
     Learning { concept: String, confidence: f32 },
     VectorComputed { id: String, dimensions: usize },
     IpfsSynced { cid: String, size: usize },
     BranchSwitch { from: String, to: String },
     AwarenessState { state: AwarenessState },
+
+    // Security events - Foundation
+    ChainValidated { entries: usize, valid: bool },
+    BtcAnchored { height: u64, hash: String },
+    ForensicLog { level: String, message: String },
+
+    // Security events - Traffic
+    TrafficAnomaly { pattern: String, severity: u8 },
+    TokenDetected { token_type: String, action: String },
+    CostAlert { provider: String, cost: f64, threshold: f64 },
+
+    // Security events - Threats
+    ThreatDetected { threat_type: String, level: u8, details: String },
+    BehaviorBaseline { entity: String, deviation: f64 },
+    PatternMatch { pattern_id: String, confidence: f64 },
+    AnomalyScore { entity: String, score: f64 },
+
+    // Security events - Defense
+    SessionIsolated { session_id: String, reason: String },
+    TarpitActivated { entity: String, delay_ms: u64 },
+    ResponseMutated { request_id: String },
+    RateLimitHit { entity: String, limit_type: String },
+
+    // Security events - Intel
+    ThreatIntelUpdate { source: String, indicators: usize },
+    SwarmAlert { from_node: String, threat_hash: String },
+    DefenseModeChanged { old: String, new: String },
 }
 
 /// The state of awareness

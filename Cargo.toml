@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "crates/gently-core",
     "crates/gently-btc",
-    "crates/gently-spl",
     "crates/gently-dance",
     "crates/gently-audio",
     "crates/gently-visual",
@@ -16,7 +15,7 @@ members = [
     "crates/gently-ipfs",
     "crates/gently-cipher",
     "crates/gently-sploit",
-    "gently-cli",
+    "crates/gently-guardian",
 ]
 
 [workspace.package]
@@ -60,11 +59,11 @@ serde_json = "1.0"
 # Error handling
 thiserror = "1.0"
 anyhow = "1.0"
+tracing = "0.1"
 
 # Internal crates
 gently-core = { path = "crates/gently-core" }
 gently-btc = { path = "crates/gently-btc" }
-gently-spl = { path = "crates/gently-spl" }
 gently-dance = { path = "crates/gently-dance" }
 gently-audio = { path = "crates/gently-audio" }
 gently-visual = { path = "crates/gently-visual" }
