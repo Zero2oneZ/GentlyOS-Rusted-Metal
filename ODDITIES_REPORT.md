@@ -2,19 +2,30 @@
 ## Audit Findings Requiring Resolution
 
 **Generated**: 2026-01-02
+**Updated**: 2026-01-03 (Audit session)
 **Severity Levels**: CRITICAL | HIGH | MEDIUM | LOW
 
 ---
 
 ## Summary
 
-| Severity | Count |
-|----------|-------|
-| CRITICAL | 3 |
-| HIGH | 5 |
-| MEDIUM | 4 |
-| LOW | 3 |
-| **TOTAL** | **15** |
+| Severity | Count | Fixed | Remaining |
+|----------|-------|-------|-----------|
+| CRITICAL | 3 | 0 | 3 |
+| HIGH | 5 | 0 | 5 |
+| MEDIUM | 4 | 0 | 4 |
+| LOW | 3 | 0 | 3 |
+| **BUILD** | **10** | **8** | **2** |
+| **TOTAL** | **25** | **8** | **17** |
+
+### 2026-01-03 Session Updates
+
+**Build blockers resolved (see AUDIT_COMPLETION_REPORT.md)**:
+- gently-feed: Added sha2, rand deps + derive macros
+- gently-search: Added sha2 dep + WormholeDetector derives + router fix
+- gently-network: Fixed temporary borrow + added Serialize/Deserialize
+- gently-brain: Fixed raw string delimiter + temporary borrows (20 errors remain)
+- Workspace: Added gently-security, gently-gateway (excluded gently-spl, gently-py)
 
 ---
 
@@ -329,14 +340,31 @@ $SHELL --version
 
 ## Action Items Checklist
 
+### Build Issues (from 2026-01-03 audit)
+- [x] Fix gently-feed missing dependencies (sha2, rand)
+- [x] Add Debug/Clone derives to ContextExtractor, BridgeDetector
+- [x] Fix gently-search missing sha2 dependency
+- [x] Add Debug/Clone derive to WormholeDetector
+- [x] Fix gently-search router.rs Pattern trait issue
+- [x] Fix gently-network capture.rs temporary borrow
+- [x] Add Serialize/Deserialize to ScopeRule, Protocol
+- [x] Fix gently-brain raw string delimiter (r#" to r##")
+- [x] Fix gently-brain claude.rs temporary borrows
+- [ ] Fix gently-brain remaining 20 API/type mismatches
+
+### Shell Scripts
 - [ ] Fix `balace` typo in `tm.sh:7`
 - [ ] Update `tm.sh` to use `tokens.env` (not `token.env`)
 - [ ] Fix syntax error in `claude.sh:5`
 - [ ] Add shell symlink to container entrypoint
 - [ ] Set SHELL environment variable in container
+
+### Features
 - [ ] Implement real IPFS integration
 - [ ] Implement real brain inference
 - [ ] Complete dance protocol implementation
+
+### Documentation
 - [ ] Document 72 semantic domains
 - [ ] Write token economics specification
 - [ ] Specify charge/decay algorithm

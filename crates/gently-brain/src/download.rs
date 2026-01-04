@@ -27,7 +27,12 @@ impl ModelDownloader {
     /// Download TinyLlama 1.1B
     pub async fn download_llama(&self) -> Result<PathBuf> {
         let model_info = super::llama::ModelInfo::tiny_llama();
-        self.download_model(&model_info.name, &model_info.url, model_info.size_mb).await
+        // Construct HuggingFace URL from repo_id and filename
+        let url = format!(
+            "https://huggingface.co/{}/resolve/main/{}",
+            model_info.repo_id, model_info.filename
+        );
+        self.download_model(&model_info.name, &url, model_info.size_mb).await
     }
 
     /// Download nomic-embed-text

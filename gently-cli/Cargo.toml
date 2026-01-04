@@ -9,15 +9,32 @@ description = "Command-line interface for GentlyOS"
 name = "gently"
 path = "src/main.rs"
 
+[[bin]]
+name = "gently-chat"
+path = "src/bin/chat.rs"
+
+[[bin]]
+name = "gently-chat-test"
+path = "src/bin/chat_test.rs"
+
+[[bin]]
+name = "gently-learn-test"
+path = "src/bin/learn_test.rs"
+
+[[bin]]
+name = "gently-search-test"
+path = "src/bin/search_test.rs"
+
 [dependencies]
 gently-core.workspace = true
 gently-dance.workspace = true
 gently-audio.workspace = true
 gently-visual.workspace = true
 gently-btc.workspace = true
-gently-spl.workspace = true
+# gently-spl.workspace = true  # Disabled: Solana version conflicts
 gently-feed.workspace = true
 gently-search.workspace = true
+gently-alexandria.workspace = true
 gently-mcp.workspace = true
 gently-architect.workspace = true
 gently-brain.workspace = true
@@ -41,3 +58,6 @@ sha1.workspace = true
 dirs.workspace = true
 ratatui.workspace = true
 crossterm = "0.28"
+num_cpus = "1.16"
+sys-info = "0.9"
+hex.workspace = true

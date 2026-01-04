@@ -46,7 +46,7 @@ pub enum InterceptMode {
     InterceptFiltered(Vec<InterceptRule>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeRule {
     pub host_pattern: String,
     pub port: Option<u16>,
@@ -84,7 +84,7 @@ impl ScopeRule {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Protocol {
     Http,
     Https,

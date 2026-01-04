@@ -1,12 +1,14 @@
 //! GentlyOS CLI
 //!
 //! Command-line interface for the GentlyOS security system.
+#![allow(dead_code, unused_variables, unused_imports, unused_mut, unexpected_cfgs)]
 
 mod report;
+mod chat;
 
 use clap::{Parser, Subcommand};
 use anyhow::Result;
-use sha2::{Sha256, Digest};
+use sha2::Digest;
 
 use gently_core::{GenesisKey, PatternEncoder, Lock, Key, KeyVault, ServiceConfig};
 use gently_core::crypto::xor::split_secret;
@@ -17,23 +19,182 @@ use gently_dance::{DanceSession, Contract};
 use gently_visual::VisualEngine;
 
 // New crate imports
-use gently_cipher::{CipherType, Cipher, Encoding, Hashes, HashIdentifier, CipherIdentifier};
+use gently_cipher::{Cipher, Encoding, Hashes, HashIdentifier, CipherIdentifier};
 use gently_cipher::analysis::FrequencyAnalysis;
 use gently_cipher::{Cracker, RainbowTable, RainbowHashType, TableGenerator, Wordlist, BruteForce};
-use gently_network::{PacketCapture, ProxyConfig, ProxyHistory, Repeater, NetworkVisualizer};
-use gently_network::capture::{filters, display_filters};
-use gently_architect::{IdeaCrystal, ProjectTree, FlowChart, RecallEngine};
-use gently_brain::{ModelDownloader, Embedder, LlamaInference, TensorChain, ClaudeClient, ClaudeModel, GentlyAssistant};
-use gently_ipfs::{IpfsClient, IpfsOperations, PinStrategy};
-use gently_sploit::{Framework, SploitConsole, ShellPayload, console::banner};
-use gently_spl::{
-    GentlyNft, GentlyWallet, WalletStore, Network,
-    GntlyToken, TokenAmount, CertificationManager,
-    PermissionManager, AuditType,
-    Installer, GentlyInstall, GosToken, OwnerType,
-    GovernanceSystem, GovernanceLevel, ROOT_TOKEN_AMOUNT, ADMIN_TOKEN_COUNT,
-    GenosEconomy, GenosAmount, ContributionType, GpuJobType,
-};
+use gently_network::PacketCapture;
+use gently_architect::{IdeaCrystal, ProjectTree, FlowChart};
+use gently_brain::{ModelDownloader, Embedder, TensorChain, ClaudeClient, ClaudeModel, GentlyAssistant};
+// gently-ipfs imported as needed within functions
+use gently_sploit::{Framework, SploitConsole, console::banner};
+
+// gently-spl disabled due to Solana version conflicts - stub types for CLI compilation
+mod spl_stub {
+    use std::fmt;
+
+    #[derive(Clone)]
+    pub struct NftMetadata { pub name: String, pub symbol: String, pub uri: String }
+
+    pub struct GentlyNft { pub metadata: NftMetadata }
+    impl GentlyNft {
+        pub fn mint(_wallet: &GentlyWallet, name: &str) -> anyhow::Result<Self> {
+            Ok(Self { metadata: NftMetadata { name: name.to_string(), symbol: "GNTLY".to_string(), uri: String::new() } })
+        }
+        pub fn mint_base58(&self) -> String { "stub_mint".to_string() }
+        pub fn holder_base58(&self) -> String { "stub_holder".to_string() }
+        pub fn qr_code(&self) -> String { "stub_qr".to_string() }
+    }
+
+    #[derive(Clone)]
+    pub struct GentlyWallet { pub pubkey: [u8; 32] }
+    impl GentlyWallet {
+        pub fn new() -> Self { Self { pubkey: [0u8; 32] } }
+        pub fn from_genesis(_key: &[u8]) -> Self { Self { pubkey: [0u8; 32] } }
+        pub fn pubkey_bytes(&self) -> &[u8] { &self.pubkey }
+        pub fn pubkey(&self) -> String { "stub_pubkey".to_string() }
+        pub fn derivation_path(&self) -> String { "m/44'/501'/0'/0'".to_string() }
+    }
+
+    pub struct WalletStore { pub network: Network }
+    impl WalletStore {
+        pub fn new(_network: Network) -> Self { Self { network: Network::Devnet } }
+        pub fn load() -> Option<Self> { None }
+        pub fn active(&self) -> Option<GentlyWallet> { None }
+        pub fn add(&mut self, _wallet: GentlyWallet) {}
+        pub fn set_active(&mut self, _idx: usize) {}
+        pub fn wallets(&self) -> Vec<GentlyWallet> { vec![] }
+        pub fn save(&self) -> Result<(), std::io::Error> { Ok(()) }
+        pub fn to_json(&self) -> String { "{}".to_string() }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum Network { Devnet, Testnet, Mainnet }
+    impl Network {
+        pub fn name(&self) -> &'static str { match self { Self::Devnet => "devnet", Self::Testnet => "testnet", Self::Mainnet => "mainnet" } }
+        pub fn rpc_url(&self) -> &'static str { "https://api.devnet.solana.com" }
+    }
+    impl std::str::FromStr for Network {
+        type Err = ();
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s { "devnet" => Ok(Self::Devnet), "testnet" => Ok(Self::Testnet), "mainnet" => Ok(Self::Mainnet), _ => Ok(Self::Devnet) }
+        }
+    }
+
+    pub struct GntlyToken;
+    impl GntlyToken {
+        pub fn devnet() -> Self { Self }
+        pub fn balance(&mut self, _pubkey: &[u8]) -> u64 { 0 }
+    }
+
+    pub struct TokenAmount(pub u64);
+
+    pub struct CertificationManager;
+    impl CertificationManager {
+        pub fn new() -> Self { Self }
+        pub fn token(&self) -> TokenBalance { TokenBalance }
+    }
+
+    pub struct TokenBalance;
+    impl TokenBalance {
+        pub fn balance(&self, _: &[u8]) -> Balance { Balance }
+    }
+
+    pub struct Balance;
+    impl Balance {
+        pub fn sufficient_for(&self, _: u64) -> bool { true }
+    }
+
+    pub struct PermissionManager { pub level: GovernanceLevel }
+    impl PermissionManager {
+        pub fn new(_owner: &str, _stake: TokenAmount) -> Self { Self { level: GovernanceLevel::User } }
+        pub fn can_read(&self) -> bool { true }
+        pub fn can_write(&self) -> bool { true }
+        pub fn can_admin(&self) -> bool { matches!(self.level, GovernanceLevel::Admin | GovernanceLevel::Root) }
+    }
+
+    pub enum AuditType { Full, Quick }
+    pub struct Installer;
+    pub struct GentlyInstall;
+    pub struct GosToken;
+    pub enum OwnerType { User, System }
+
+    #[derive(Clone)]
+    pub struct TokenGenerator { pub genesis_hash: [u8; 32] }
+    impl TokenGenerator {
+        pub fn new() -> Self { Self { genesis_hash: [0u8; 32] } }
+    }
+
+    #[derive(Clone)]
+    pub struct GovernanceSystem {
+        pub level: GovernanceLevel,
+        pub root_wallet: GentlyWallet,
+        pub admin_wallet: GentlyWallet,
+        pub developer_wallet: GentlyWallet,
+        pub token_gen: TokenGenerator,
+    }
+    impl GovernanceSystem {
+        pub fn new(_network: Network, level: GovernanceLevel, _key: &[u8], _stake: f64) -> Self {
+            Self {
+                level,
+                root_wallet: GentlyWallet::new(),
+                admin_wallet: GentlyWallet::new(),
+                developer_wallet: GentlyWallet::new(),
+                token_gen: TokenGenerator::new(),
+            }
+        }
+        pub fn level(&self) -> &GovernanceLevel { &self.level }
+        pub fn initialize_folders(&self) -> anyhow::Result<()> { Ok(()) }
+        pub fn hierarchy_tree(&self) -> String { "GovernanceHierarchy\n├── Root\n├── Admin\n└── User".to_string() }
+        pub fn to_json(&self) -> String { "{}".to_string() }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum GovernanceLevel { Guest, User, Developer, Service, System, Admin, Root }
+    impl fmt::Display for GovernanceLevel {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{:?}", self) }
+    }
+
+    pub const ROOT_TOKEN_AMOUNT: u64 = 1_000_000;
+    pub const ADMIN_TOKEN_COUNT: u64 = 10;
+
+    pub struct GenosEconomy;
+    impl GenosEconomy {
+        pub fn new(_network: Network) -> Self { Self }
+    }
+
+    pub struct GenosAmount(pub u64);
+    pub enum ContributionType { Compute, Storage, Bandwidth }
+    pub enum GpuJobType { Inference, Training }
+
+    pub mod nft {
+        pub struct UnlockContract;
+        impl UnlockContract { pub fn open(_: &[u8]) -> Self { Self } }
+    }
+    pub mod token {
+        pub mod pricing {
+            pub const DEVNET_UNLOCK_STAKE: u64 = 1000;
+            pub const HIVE_QUERY: u64 = 10;
+            pub const CHAIN_SUBMIT: u64 = 100;
+            pub const CHAIN_REWARD: u64 = 50;
+            pub const MIN_STAKE: u64 = 100;
+            pub const PREMIUM_MONTHLY: u64 = 1000;
+        }
+        pub mod certification {
+            pub const DANCE_SWAP: u64 = 100;
+            pub const ABORT_PENALTY: u64 = 50;
+            pub const VERIFICATION_BONUS: u64 = 25;
+        }
+    }
+    pub mod permissions {
+        pub const ROOT_STAKE_PERCENT: f64 = 0.51;
+        pub const AUDIT_SWAP_AMOUNT: u64 = 1000;
+    }
+    pub const GENOS_SYMBOL: &str = "GENOS";
+    pub const GENOS_NAME: &str = "GentlyOS Token";
+    pub const GENOS_DECIMALS: u8 = 9;
+    pub const GENOS_TOTAL_SUPPLY: u64 = 1_000_000_000_000_000_000;
+}
+use spl_stub::*;
 
 #[derive(Parser)]
 #[command(name = "gently")]
@@ -74,6 +235,21 @@ enum Commands {
         /// Salt for seed derivation
         #[arg(long, default_value = "gently-default")]
         salt: String,
+
+        /// Non-interactive mode (for scripts)
+        #[arg(long)]
+        non_interactive: bool,
+    },
+
+    /// Run first-time setup wizard
+    Setup {
+        /// Skip embedding model download
+        #[arg(long)]
+        skip_models: bool,
+
+        /// Force re-initialization
+        #[arg(short, long)]
+        force: bool,
     },
 
     /// Create a new project with Lock/Key pair
@@ -175,6 +351,12 @@ enum Commands {
         command: SearchCommands,
     },
 
+    /// Alexandria - Distributed knowledge mesh
+    Alexandria {
+        #[command(subcommand)]
+        command: AlexandriaCommands,
+    },
+
     /// MCP Server - Claude integration via Model Context Protocol
     Mcp {
         #[command(subcommand)]
@@ -237,6 +419,9 @@ enum Commands {
 
     /// Interactive TUI dashboard report
     Report,
+
+    /// Local AI chat (TinyLlama - runs offline, no API costs)
+    Chat,
 }
 
 #[derive(Subcommand)]
@@ -634,6 +819,52 @@ enum SearchCommands {
     Domain {
         /// Domain index (0-71)
         domain: u8,
+    },
+}
+
+#[derive(Subcommand)]
+enum AlexandriaCommands {
+    /// Show Alexandria mesh status
+    Status,
+
+    /// Query the distributed knowledge graph
+    Query {
+        /// Concept to query
+        concept: String,
+
+        /// Include historical data
+        #[arg(long)]
+        history: bool,
+
+        /// Include drift analysis
+        #[arg(long)]
+        drift: bool,
+    },
+
+    /// Show mesh topology for a concept
+    Topology {
+        /// Concept to explore
+        concept: String,
+
+        /// Maximum hops
+        #[arg(short, long, default_value = "2")]
+        hops: usize,
+    },
+
+    /// Show connected nodes in the mesh
+    Nodes,
+
+    /// Sync with the mesh network
+    Sync,
+
+    /// Show contribution proof for rewards
+    Proof,
+
+    /// Export graph to file
+    Export {
+        /// Output file
+        #[arg(short, long, default_value = "alexandria.json")]
+        output: String,
     },
 }
 
@@ -1261,7 +1492,8 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Install { stake, network, seed, output } => cmd_install(stake, network, seed, output),
-        Commands::Init { seed, salt } => cmd_init(seed, salt),
+        Commands::Init { seed, salt, non_interactive } => cmd_init(seed, salt, non_interactive),
+        Commands::Setup { skip_models, force } => cmd_setup(skip_models, force),
         Commands::Create { name, description, expires } => cmd_create(name, description, expires),
         Commands::Pattern { hash, output } => cmd_pattern(hash, output),
         Commands::Split { secret } => cmd_split(secret),
@@ -1276,6 +1508,7 @@ fn main() -> Result<()> {
         Commands::Genos { command } => cmd_genos(command),
         Commands::Feed { command } => cmd_feed(command),
         Commands::Search { command } => cmd_search(command),
+        Commands::Alexandria { command } => cmd_alexandria(command),
         Commands::Mcp { command } => cmd_mcp(command),
         Commands::Cipher { command } => cmd_cipher(command),
         Commands::Network { command } => cmd_network(command),
@@ -1289,19 +1522,31 @@ fn main() -> Result<()> {
         Commands::Report => {
             report::run_report().map_err(|e| anyhow::anyhow!("TUI error: {}", e))
         }
+        Commands::Chat => {
+            run_local_chat()
+        }
     }
 }
 
 // Global state for demo purposes (in production, use proper storage)
+// These are used when SPL is enabled - suppress warnings while disabled
+#[allow(dead_code)]
 use std::sync::Mutex;
 
 static DEMO_GENESIS: Mutex<Option<[u8; 32]>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_TOKEN: Mutex<Option<GntlyToken>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_CERTIFICATION: Mutex<Option<CertificationManager>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_PERMISSIONS: Mutex<Option<PermissionManager>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_INSTALL: Mutex<Option<GentlyInstall>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_GOS_TOKEN: Mutex<Option<GosToken>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_GOVERNANCE: Mutex<Option<GovernanceSystem>> = Mutex::new(None);
+#[allow(dead_code)]
 static DEMO_GENOS: Mutex<Option<GenosEconomy>> = Mutex::new(None);
 
 fn get_demo_genesis() -> [u8; 32] {
@@ -1314,6 +1559,7 @@ fn get_demo_genesis() -> [u8; 32] {
     guard.unwrap()
 }
 
+#[allow(dead_code)]
 fn with_demo_token<F, R>(f: F) -> R
 where
     F: FnOnce(&mut GntlyToken) -> R,
@@ -1325,6 +1571,7 @@ where
     f(guard.as_mut().unwrap())
 }
 
+#[allow(dead_code)]
 fn with_demo_certification<F, R>(f: F) -> R
 where
     F: FnOnce(&mut CertificationManager) -> R,
@@ -1336,6 +1583,7 @@ where
     f(guard.as_mut().unwrap())
 }
 
+#[allow(dead_code)]
 fn with_demo_permissions<F, R>(f: F) -> Option<R>
 where
     F: FnOnce(&mut PermissionManager) -> R,
@@ -1344,155 +1592,213 @@ where
     guard.as_mut().map(f)
 }
 
+#[allow(dead_code)]
 fn init_demo_permissions(owner: &str, stake: TokenAmount) {
     let mut guard = DEMO_PERMISSIONS.lock().unwrap();
     *guard = Some(PermissionManager::new(owner, stake));
 }
 
-fn cmd_install(stake: f64, network_str: String, seed: Option<String>, output: Option<String>) -> Result<()> {
-    let network = match network_str.as_str() {
-        "devnet" => Network::Devnet,
-        "testnet" => Network::Testnet,
-        "mainnet" | "mainnet-beta" => Network::Mainnet,
-        _ => anyhow::bail!("Unknown network: {}. Use devnet, testnet, or mainnet", network_str),
-    };
+// gently-spl disabled due to Solana version conflicts
 
-    println!("\n  GENTLYOS INSTALLATION");
-    println!("  ======================\n");
+fn spl_disabled_msg() -> Result<()> {
+    println!("\n  ⚠ gently-spl module disabled");
+    println!("  Solana token functionality requires resolving version conflicts.");
+    println!("  This command will be available once gently-spl is re-enabled.\n");
+    Ok(())
+}
 
-    // Generate or use provided genesis
+#[allow(dead_code)]
+fn cmd_install(_stake: f64, _network_str: String, _seed: Option<String>, _output: Option<String>) -> Result<()> {
+    spl_disabled_msg()
+}
+
+fn cmd_init(seed: Option<String>, salt: String, non_interactive: bool) -> Result<()> {
     let genesis = match seed {
         Some(s) => {
-            println!("  Using seed phrase for deterministic genesis...");
-            GenesisKey::from_seed(&s, "gently-install")
+            if !non_interactive {
+                println!("Generating genesis key from seed phrase...");
+            }
+            GenesisKey::from_seed(&s, &salt)
         }
         None => {
-            println!("  Generating random genesis key...");
+            if !non_interactive {
+                println!("Generating random genesis key...");
+            }
             GenesisKey::generate()
         }
     };
 
-    // Create governance system
-    let mut gov_system = GovernanceSystem::new(genesis.as_bytes(), "CLI", network);
-    gov_system.initialize_folders(genesis.as_bytes());
+    if non_interactive {
+        // Just output fingerprint for scripts
+        println!("{:02x?}", genesis.fingerprint());
+    } else {
+        println!("\n  GENESIS KEY CREATED");
+        println!("  Fingerprint: {:02x?}", genesis.fingerprint());
+        println!("\n  Store this securely! It never leaves your device.");
 
-    // Store in demo state
-    {
-        let mut guard = DEMO_GENESIS.lock().unwrap();
-        *guard = Some(*genesis.as_bytes());
+        // In real implementation, we'd store in OS keychain
+        let hex: String = genesis.as_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        println!("\n  (Development mode - key in hex):");
+        println!("  {}", hex);
     }
-    {
-        let mut guard = DEMO_GOVERNANCE.lock().unwrap();
-        *guard = Some(gov_system.clone());
-    }
-
-    // Display TOKEN HIERARCHY
-    println!("  TOKEN HIERARCHY");
-    println!("  ================\n");
-
-    println!("  LEVEL 0: ROOT [FROZEN]");
-    println!("  ----------------------");
-    println!("  Token:   {}", gov_system.root_wallet.token_id);
-    println!("  Amount:  {} (IMMUTABLE)", ROOT_TOKEN_AMOUNT);
-    println!("  Wallet:  {}...", &gov_system.root_wallet.pubkey[..24]);
-    println!("  Purpose: LOCKS /gently/core - no file changes allowed");
-    println!();
-
-    println!("  LEVEL 1: DEVELOPER");
-    println!("  ------------------");
-    println!("  Token:   {}", gov_system.developer_wallet.token_id);
-    println!("  Amount:  {} (holds ROOT tokens)", ROOT_TOKEN_AMOUNT);
-    println!("  Wallet:  {}...", &gov_system.developer_wallet.pubkey[..24]);
-    println!("  Purpose: Entry barrier to core OS operations");
-    println!();
-
-    println!("  LEVEL 2: ADMIN");
-    println!("  ---------------");
-    println!("  Token:   {}", gov_system.admin_wallet.token_id);
-    println!("  Amount:  {} (distributes down)", ADMIN_TOKEN_COUNT);
-    println!("  Wallet:  {}...", &gov_system.admin_wallet.pubkey[..24]);
-    println!("  Purpose: Auto-swap on file ops, audit collection");
-    println!();
-
-    println!("  FOLDER WALLETS (1 token each, weighted by file size)");
-    println!("  =====================================================\n");
-
-    let hierarchy = gov_system.hierarchy_tree();
-    for entry in hierarchy.iter().skip(3) { // Skip ROOT, DEV, ADMIN
-        let indent = "  ".repeat(entry.depth.saturating_sub(2));
-        let frozen = if entry.frozen { " [FROZEN]" } else { "" };
-        let level_str = match entry.level {
-            GovernanceLevel::Root => "ROOT",
-            GovernanceLevel::Developer => "DEV ",
-            GovernanceLevel::Admin => "ADM ",
-            GovernanceLevel::System => "SYS ",
-            GovernanceLevel::Service => "SVC ",
-            GovernanceLevel::User => "USR ",
-            GovernanceLevel::Guest => "GST ",
-        };
-
-        if let Some(path) = &entry.path {
-            println!("  {}[{}] {}{}", indent, level_str, path, frozen);
-            println!("  {}      Token: {}", indent, entry.token_id);
-            println!("  {}      Wallet: {}...", indent, &entry.wallet[..20]);
-        }
-    }
-
-    println!();
-    println!("  GOVERNANCE RULES");
-    println!("  =================");
-    println!("  - ROOT (101010 tokens): FROZEN - core OS locked");
-    println!("  - ADMIN (10 tokens): Collects/distributes on file ops");
-    println!("  - FOLDERS: 1 token each, stake weighted by file size");
-    println!("  - USERS: Fixed allocation, CANNOT accumulate more");
-    println!();
-    println!("  DECLINING GRADIENT:");
-    println!("  -------------------");
-    println!("  Root=100% -> Dev=90% -> Admin=70% -> System=50% -> User=10%");
-    println!();
-    println!("  All file operations trigger automatic token swaps for audit.");
-    println!("  Frozen folders reject ALL operations.");
-
-    // Save to file if requested
-    if let Some(path) = output {
-        let json = gov_system.to_json()
-            .map_err(|e| anyhow::anyhow!("JSON export failed: {}", e))?;
-        std::fs::write(&path, &json)?;
-        println!();
-        println!("  Installation saved to: {}", path);
-    }
-
-    println!();
-    println!("  INSTALLATION COMPLETE");
-    println!("  =====================");
-    println!("  System ID: {}-{}", gov_system.token_gen.system_id, gov_system.token_gen.unit_id);
-    println!("  Model: {}", gov_system.token_gen.model);
-    println!("  Network: {:?}", network);
-    println!("  Genesis: {:02x?}...", &genesis.as_bytes()[..8]);
 
     Ok(())
 }
 
-fn cmd_init(seed: Option<String>, salt: String) -> Result<()> {
-    let genesis = match seed {
-        Some(s) => {
-            println!("Generating genesis key from seed phrase...");
-            GenesisKey::from_seed(&s, &salt)
-        }
-        None => {
-            println!("Generating random genesis key...");
-            GenesisKey::generate()
-        }
-    };
+fn cmd_setup(skip_models: bool, force: bool) -> Result<()> {
+    use std::path::PathBuf;
 
-    println!("\n  GENESIS KEY CREATED");
-    println!("  Fingerprint: {:02x?}", genesis.fingerprint());
-    println!("\n  Store this securely! It never leaves your device.");
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║           GentlyOS Setup Wizard                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
 
-    // In real implementation, we'd store in OS keychain
-    let hex: String = genesis.as_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-    println!("\n  (Development mode - key in hex):");
-    println!("  {}", hex);
+    // 1. Check/create data directories
+    let data_dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".gently");
+
+    println!("Step 1: Creating data directories...");
+
+    let subdirs = ["alexandria", "brain", "feed", "models", "vault"];
+    for subdir in &subdirs {
+        let path = data_dir.join(subdir);
+        if !path.exists() {
+            std::fs::create_dir_all(&path)?;
+            println!("  ✓ Created {}", path.display());
+        } else {
+            println!("  • {} already exists", path.display());
+        }
+    }
+
+    // 2. Check for genesis key
+    println!("\nStep 2: Checking genesis key...");
+    let vault_dir = data_dir.join("vault");
+    let genesis_file = vault_dir.join("genesis.key");
+
+    if genesis_file.exists() && !force {
+        println!("  • Genesis key already exists");
+    } else {
+        println!("  Generating genesis key...");
+        let genesis = GenesisKey::generate();
+        let hex: String = genesis.as_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        std::fs::write(&genesis_file, &hex)?;
+        println!("  ✓ Genesis key created");
+        println!("    Fingerprint: {:02x?}", genesis.fingerprint());
+    }
+
+    // 3. Initialize Alexandria graph
+    println!("\nStep 3: Initializing Alexandria knowledge graph...");
+    let graph_path = data_dir.join("alexandria").join("graph.json");
+
+    if graph_path.exists() && !force {
+        println!("  • Alexandria graph already exists");
+    } else {
+        use gently_alexandria::{AlexandriaGraph, AlexandriaConfig, node::NodeFingerprint};
+
+        // Create fingerprint from hardware info
+        let machine_id = std::fs::read_to_string("/etc/machine-id")
+            .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
+        let fingerprint = NodeFingerprint::from_hardware(
+            "local-setup",
+            num_cpus::get() as u32,
+            (sys_info::mem_info().map(|m| m.total / 1024 / 1024).unwrap_or(8)) as u32,
+            machine_id.trim(),
+        );
+
+        let config = AlexandriaConfig::default();
+        let graph = AlexandriaGraph::new(fingerprint, config);
+        graph.save(&graph_path)?;
+        println!("  ✓ Alexandria graph initialized");
+    }
+
+    // 4. Initialize Brain knowledge database
+    println!("\nStep 4: Initializing Brain knowledge database...");
+    let brain_path = data_dir.join("brain").join("knowledge.db");
+
+    if brain_path.exists() && !force {
+        println!("  • Brain database already exists");
+    } else {
+        use gently_brain::knowledge::KnowledgeGraph;
+
+        let kg = KnowledgeGraph::new();
+        kg.save(&brain_path)?;
+        println!("  ✓ Brain database initialized");
+    }
+
+    // 5. Optionally download embedding model
+    if !skip_models {
+        println!("\nStep 5: Checking embedding model...");
+        let model_cache = data_dir.join("models");
+
+        // Check if fastembed feature is available
+        #[cfg(feature = "fastembed")]
+        {
+            println!("  Downloading BAAI/bge-small-en-v1.5 embedding model...");
+            println!("  (This may take a few minutes on first run)");
+
+            use gently_brain::embedder::Embedder;
+            let mut embedder = Embedder::new();
+            match embedder.load_default() {
+                Ok(()) => println!("  ✓ Embedding model loaded"),
+                Err(e) => println!("  ⚠ Model download failed: {} (will use simulated embeddings)", e),
+            }
+        }
+
+        #[cfg(not(feature = "fastembed"))]
+        {
+            println!("  • Fastembed not enabled - using simulated embeddings");
+            println!("    (Enable with: cargo build --features fastembed)");
+        }
+    } else {
+        println!("\nStep 5: Skipping embedding model download (--skip-models)");
+    }
+
+    // 6. Create default config
+    println!("\nStep 6: Creating configuration...");
+    let config_path = data_dir.join("config.toml");
+
+    if config_path.exists() && !force {
+        println!("  • Configuration already exists");
+    } else {
+        let config_content = format!(r#"# GentlyOS Configuration
+# Generated by 'gently setup'
+
+[general]
+data_dir = "{}"
+
+[security]
+defense_mode = "normal"
+threat_detection = true
+
+[alexandria]
+graph_path = "{}"
+
+[brain]
+knowledge_db = "{}"
+"#,
+            data_dir.display(),
+            graph_path.display(),
+            brain_path.display(),
+        );
+
+        std::fs::write(&config_path, config_content)?;
+        println!("  ✓ Configuration created at {}", config_path.display());
+    }
+
+    // Summary
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║           Setup Complete!                                    ║");
+    println!("╠══════════════════════════════════════════════════════════════╣");
+    println!("║                                                              ║");
+    println!("║   Data directory: ~/.gently/                                 ║");
+    println!("║                                                              ║");
+    println!("║   Quick Start:                                               ║");
+    println!("║     gently status       - Check system status                ║");
+    println!("║     gently brain chat   - Start AI chat                      ║");
+    println!("║     gently alexandria   - Explore knowledge graph            ║");
+    println!("║                                                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
 
     Ok(())
 }
@@ -1618,43 +1924,9 @@ fn cmd_combine(lock_hex: String, key_hex: String) -> Result<()> {
     Ok(())
 }
 
-fn cmd_mint(project: String, visual: String) -> Result<()> {
-    println!("Minting NFT for project: {}", project);
-
-    // Get wallet from demo genesis
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    // Generate a key for demo
-    let mut key = [0u8; 32];
-    rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut key);
-
-    // Create unlock contract
-    let contract = gently_spl::nft::UnlockContract::open(wallet.pubkey_bytes());
-
-    // Mint NFT
-    let nft = GentlyNft::mint(
-        &wallet,
-        &key,
-        visual.clone(),
-        contract,
-        Some(format!("GentlyOS: {}", project)),
-    )?;
-
-    println!("\n  NFT MINTED");
-    println!("  Mint: {}", nft.mint_base58());
-    println!("  Symbol: {}", nft.metadata.symbol);
-    println!("  Visual: {}", visual);
-    println!("  Holder: {}", nft.holder_base58());
-    println!("\n  QR Code Data:");
-    if let Some(qr) = nft.qr_code() {
-        println!("  {}", qr);
-    }
-
-    println!("\n  Transfer this NFT to grant access.");
-    println!("  The holder can extract the KEY with their wallet.");
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_mint(_project: String, _visual: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
 fn cmd_status() -> Result<()> {
@@ -1774,727 +2046,141 @@ fn cmd_demo() -> Result<()> {
     Ok(())
 }
 
-// ===== WALLET COMMANDS =====
+// ===== WALLET COMMANDS (SPL disabled) =====
 
-fn cmd_wallet(command: WalletCommands) -> Result<()> {
-    match command {
-        WalletCommands::Create { network, seed } => cmd_wallet_create(network, seed),
-        WalletCommands::Info { file } => cmd_wallet_info(file),
-        WalletCommands::Pubkey => cmd_wallet_pubkey(),
-        WalletCommands::Sign { message } => cmd_wallet_sign(message),
-    }
+#[allow(dead_code)]
+fn cmd_wallet(_command: WalletCommands) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_wallet_create(network_str: String, seed: Option<String>) -> Result<()> {
-    let network = match network_str.as_str() {
-        "devnet" => Network::Devnet,
-        "testnet" => Network::Testnet,
-        "mainnet" | "mainnet-beta" => Network::Mainnet,
-        _ => anyhow::bail!("Unknown network: {}. Use devnet, testnet, or mainnet", network_str),
-    };
-
-    println!("\n  CREATING GENTLYOS WALLET");
-    println!("  ========================\n");
-
-    // Generate or use provided genesis
-    let genesis = match seed {
-        Some(s) => {
-            println!("  Using seed phrase for deterministic generation...");
-            GenesisKey::from_seed(&s, "gently-wallet")
-        }
-        None => {
-            println!("  Generating random genesis key...");
-            GenesisKey::generate()
-        }
-    };
-
-    // Create wallet
-    let wallet = GentlyWallet::from_genesis(genesis.as_bytes(), network);
-
-    println!("  Network: {:?}", network);
-    println!("  RPC URL: {}", network.rpc_url());
-    println!();
-    println!("  WALLET CREATED");
-    println!("  ==============");
-    println!("  Public Key: {}", wallet.pubkey());
-    println!("  Derivation: {}", wallet.derivation_path());
-    println!();
-
-    // Create wallet store
-    let store = WalletStore::new(genesis.as_bytes(), network);
-    let json = store.to_json()?;
-
-    println!("  Wallet JSON (save this securely):");
-    println!("  {}", json);
-    println!();
-    println!("  This wallet is LOCKED to your genesis key.");
-    println!("  Same genesis = same wallet. Different genesis = different wallet.");
-    println!();
-    println!("  Fund with SOL on {} to use:", network.name());
-    println!("  solana airdrop 1 {} --url {}", wallet.pubkey(), network.rpc_url());
-
-    // Store genesis for demo
-    {
-        let mut guard = DEMO_GENESIS.lock().unwrap();
-        *guard = Some(*genesis.as_bytes());
-    }
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_wallet_create(_network_str: String, _seed: Option<String>) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_wallet_info(_file: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    println!("\n  WALLET INFO");
-    println!("  ===========\n");
-    println!("  Public Key: {}", wallet.pubkey());
-    println!("  Network:    {:?}", wallet.network());
-    println!("  Derivation: {}", wallet.derivation_path());
-    println!();
-    println!("  This wallet is derived from your genesis key.");
-    println!("  It can sign transactions for GentlyOS operations.");
-
-    Ok(())
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_wallet_pubkey() -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    println!("{}", wallet.pubkey());
-
-    Ok(())
+    spl_disabled_msg()
 }
 
-fn cmd_wallet_sign(message: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    let signature = wallet.sign(message.as_bytes());
-    let sig_base58 = bs58::encode(&signature).into_string();
-
-    println!("\n  MESSAGE SIGNED");
-    println!("  ==============\n");
-    println!("  Message:   {}", message);
-    println!("  Signer:    {}", wallet.pubkey());
-    println!("  Signature: {}", sig_base58);
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_wallet_sign(_message: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
-// ===== TOKEN COMMANDS =====
+// ===== TOKEN COMMANDS (SPL disabled) =====
 
-fn cmd_token(command: TokenCommands) -> Result<()> {
-    match command {
-        TokenCommands::Balance { pubkey } => cmd_token_balance(pubkey),
-        TokenCommands::Airdrop { amount } => cmd_token_airdrop(amount),
-        TokenCommands::Transfer { to, amount } => cmd_token_transfer(to, amount),
-        TokenCommands::Stake { amount } => cmd_token_stake(amount),
-        TokenCommands::Info => cmd_token_info(),
-    }
+#[allow(dead_code)]
+fn cmd_token(_command: TokenCommands) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_token_balance(pubkey: Option<String>) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    with_demo_token(|token| {
-        let pk = pubkey.unwrap_or_else(|| wallet.pubkey());
-        let balance = token.balance(&pk);
-
-        println!("\n  GNTLY BALANCE");
-        println!("  =============\n");
-        println!("  Wallet:  {}", pk);
-        println!("  Balance: {}", balance);
-        println!("  Network: {:?}", token.network());
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_token_balance(_pubkey: Option<String>) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_token_airdrop(amount: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    let amount = TokenAmount::from_gntly(amount);
-    with_demo_token(|token| {
-        token.airdrop(&wallet.pubkey(), amount).ok();
-
-        println!("\n  AIRDROP SUCCESSFUL");
-        println!("  ==================\n");
-        println!("  Recipient: {}", wallet.pubkey());
-        println!("  Amount:    {}", amount);
-        println!("  New Balance: {}", token.balance(&wallet.pubkey()));
-        println!();
-        println!("  (Devnet only - for testing purposes)");
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_token_airdrop(_amount: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_token_transfer(to: String, amount: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    let amount = TokenAmount::from_gntly(amount);
-
-    // Sign the transfer
-    let message = format!("transfer:{}:{}:{}", wallet.pubkey(), to, amount.lamports());
-    let signature = wallet.sign(message.as_bytes());
-
-    with_demo_token(|token| {
-        if let Ok(receipt) = token.transfer(&wallet.pubkey(), &to, amount, &signature) {
-            println!("\n  TRANSFER SUCCESSFUL");
-            println!("  ===================\n");
-            println!("  From:      {}", receipt.from);
-            println!("  To:        {}", receipt.to);
-            println!("  Amount:    {}", receipt.amount);
-            println!("  Signature: {}...", &receipt.signature[..16]);
-            println!();
-            println!("  Your new balance: {}", token.balance(&wallet.pubkey()));
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_token_transfer(_to: String, _amount: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_token_stake(amount: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-
-    let amount = TokenAmount::from_gntly(amount);
-    with_demo_token(|token| {
-        if let Ok(receipt) = token.stake(&wallet.pubkey(), amount) {
-            println!("\n  STAKE SUCCESSFUL");
-            println!("  ================\n");
-            println!("  Staker: {}", receipt.staker);
-            println!("  Amount: {}", receipt.amount);
-            println!();
-            println!("  You now have access to hive queries!");
-            println!("  Remaining balance: {}", token.balance(&wallet.pubkey()));
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_token_stake(_amount: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_token_info() -> Result<()> {
-    use gently_spl::token::pricing;
-
-    println!("\n  GNTLY TOKEN INFO");
-    println!("  =================\n");
-    println!("  Name:     GentlyOS Token");
-    println!("  Symbol:   GNTLY");
-    println!("  Decimals: 9");
-    println!("  Network:  Solana Devnet");
-    println!();
-    println!("  PRICING:");
-    println!("  ---------");
-    println!("  Hive Query:      {}", pricing::HIVE_QUERY);
-    println!("  Chain Submit:    {}", pricing::CHAIN_SUBMIT);
-    println!("  Chain Reward:    {}", pricing::CHAIN_REWARD);
-    println!("  Minimum Stake:   {}", pricing::MIN_STAKE);
-    println!("  Premium Monthly: {}", pricing::PREMIUM_MONTHLY);
-    println!();
-    println!("  Use 'gently token airdrop' to get test tokens on devnet.");
-
-    Ok(())
+    spl_disabled_msg()
 }
 
-// ===== CERTIFICATION COMMANDS =====
+// ===== CERTIFICATION COMMANDS (SPL disabled) =====
 
-fn cmd_certify(command: CertifyCommands) -> Result<()> {
-    match command {
-        CertifyCommands::Init { peer } => cmd_certify_init(peer),
-        CertifyCommands::Complete { session } => cmd_certify_complete(session),
-        CertifyCommands::Abort { session } => cmd_certify_abort(session),
-        CertifyCommands::History => cmd_certify_history(),
-        CertifyCommands::Info => cmd_certify_info(),
-    }
+#[allow(dead_code)]
+fn cmd_certify(_command: CertifyCommands) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_certify_init(peer: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    // Generate session hash
-    let mut session_hash = [0u8; 32];
-    rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut session_hash);
-    let session_hex: String = session_hash.iter().map(|b| format!("{:02x}", b)).collect();
-
-    with_demo_certification(|manager| {
-        // Ensure both parties have tokens for the dance
-        if !manager.token().balance(&my_pubkey).sufficient_for(gently_spl::token::certification::DANCE_SWAP) {
-            manager.token().airdrop(&my_pubkey, TokenAmount::from_gntly(1.0)).ok();
-        }
-        if !manager.token().balance(&peer).sufficient_for(gently_spl::token::certification::DANCE_SWAP) {
-            manager.token().airdrop(&peer, TokenAmount::from_gntly(1.0)).ok();
-        }
-
-        if let Ok(record) = manager.init_dance(&my_pubkey, &peer, session_hash) {
-            println!("\n  DANCE CERTIFICATION INITIATED");
-            println!("  ==============================\n");
-            println!("  Device A (you):  {}", my_pubkey);
-            println!("  Device B (peer): {}", peer);
-            println!("  Session Hash:    {}", session_hex);
-            println!("  Status:          {:?}", record.status);
-            println!();
-            println!("  Swap amount: {} (each direction)", record.swap_a_to_b);
-            println!();
-            println!("  To complete the dance:");
-            println!("    gently certify complete {}", session_hex);
-            println!();
-            println!("  To abort:");
-            println!("    gently certify abort {}", session_hex);
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_certify_init(_peer: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_certify_complete(session: String) -> Result<()> {
-    if session.len() != 64 {
-        anyhow::bail!("Session hash must be 64 hex characters");
-    }
-
-    let mut session_hash = [0u8; 32];
-    for (i, chunk) in session.as_bytes().chunks(2).enumerate() {
-        let s = std::str::from_utf8(chunk)?;
-        session_hash[i] = u8::from_str_radix(s, 16)?;
-    }
-
-    with_demo_certification(|manager| {
-        if let Ok(record) = manager.complete_dance(&session_hash) {
-            println!("\n  DANCE CERTIFICATION COMPLETE");
-            println!("  =============================\n");
-            println!("  Device A: {}", record.device_a);
-            println!("  Device B: {}", record.device_b);
-            println!("  Status:   {:?}", record.status);
-            println!();
-            println!("  Tokens swapped: {} each direction", record.swap_a_to_b);
-            println!("  Both devices received verification bonus!");
-            println!();
-            println!("  New balances:");
-            println!("    Device A: {}", manager.token().balance(&record.device_a));
-            println!("    Device B: {}", manager.token().balance(&record.device_b));
-            println!();
-            println!("  This certification is recorded on-chain.");
-            println!("  Both devices can now prove mutual verification.");
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_certify_complete(_session: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_certify_abort(session: String) -> Result<()> {
-    if session.len() != 64 {
-        anyhow::bail!("Session hash must be 64 hex characters");
-    }
-
-    let mut session_hash = [0u8; 32];
-    for (i, chunk) in session.as_bytes().chunks(2).enumerate() {
-        let s = std::str::from_utf8(chunk)?;
-        session_hash[i] = u8::from_str_radix(s, 16)?;
-    }
-
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    with_demo_certification(|manager| {
-        if manager.abort_dance(&session_hash, &my_pubkey).is_ok() {
-            println!("\n  DANCE CERTIFICATION ABORTED");
-            println!("  ============================\n");
-            println!("  Session:  {}", session);
-            println!("  Aborter:  {}", my_pubkey);
-            println!();
-            println!("  Penalty applied: {}", gently_spl::token::certification::ABORT_PENALTY);
-            println!("  Your new balance: {}", manager.token().balance(&my_pubkey));
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_certify_abort(_session: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_certify_history() -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    with_demo_certification(|manager| {
-        let history = manager.history(&my_pubkey);
-
-        println!("\n  CERTIFICATION HISTORY");
-        println!("  =====================\n");
-        println!("  Device: {}", my_pubkey);
-        println!("  Total certifications: {}", history.len());
-        println!("  Verified: {}", manager.verified_count(&my_pubkey));
-        println!();
-
-        if history.is_empty() {
-            println!("  No certifications yet.");
-            println!("  Use 'gently certify init <peer>' to start a Dance.");
-        } else {
-            for (i, record) in history.iter().enumerate() {
-                let session_hex: String = record.session_hash.iter().map(|b| format!("{:02x}", b)).collect();
-                let peer = if record.device_a == my_pubkey {
-                    &record.device_b
-                } else {
-                    &record.device_a
-                };
-
-                println!("  [{}] Status: {:?}", i + 1, record.status);
-                println!("      Peer: {}...", &peer[..16]);
-                println!("      Session: {}...", &session_hex[..16]);
-                println!("      Swapped: {}", record.swap_a_to_b);
-                println!();
-            }
-        }
-    });
-
-    Ok(())
+    spl_disabled_msg()
 }
 
 fn cmd_certify_info() -> Result<()> {
-    use gently_spl::token::certification;
-
-    println!("\n  DANCE CERTIFICATION INFO");
-    println!("  =========================\n");
-    println!("  Dance certification proves two devices mutually verified");
-    println!("  each other via the visual-audio handshake protocol.");
-    println!();
-    println!("  HOW IT WORKS:");
-    println!("  -------------");
-    println!("  1. Device A initiates dance with Device B");
-    println!("  2. Both devices escrow {} GNTLY", certification::DANCE_SWAP);
-    println!("  3. Dance protocol executes (visual/audio handshake)");
-    println!("  4. On success: tokens swap, both get bonus");
-    println!("  5. On abort: aborter pays penalty");
-    println!();
-    println!("  PRICING:");
-    println!("  --------");
-    println!("  Dance Swap:         {}", certification::DANCE_SWAP);
-    println!("  Verification Bonus: {}", certification::VERIFICATION_BONUS);
-    println!("  Abort Penalty:      {}", certification::ABORT_PENALTY);
-    println!();
-    println!("  The token swap creates an on-chain proof that both");
-    println!("  devices successfully verified each other.");
-    println!();
-    println!("  Mainnet stake required for devnet access: {}",
-             gently_spl::token::pricing::DEVNET_UNLOCK_STAKE);
-
-    Ok(())
+    spl_disabled_msg()
 }
 
-// ===== PERMISSION COMMANDS =====
+// ===== PERMISSION COMMANDS (SPL disabled) =====
 
-fn cmd_perm(command: PermCommands) -> Result<()> {
-    match command {
-        PermCommands::Init { stake } => cmd_perm_init(stake),
-        PermCommands::Add { path, owner, dir } => cmd_perm_add(path, owner, dir),
-        PermCommands::Edit { path } => cmd_perm_edit(path),
-        PermCommands::Tree => cmd_perm_tree(),
-        PermCommands::Audits => cmd_perm_audits(),
-        PermCommands::Health => cmd_perm_health(),
-        PermCommands::Info => cmd_perm_info(),
-    }
+#[allow(dead_code)]
+fn cmd_perm(_command: PermCommands) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_perm_init(stake: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    let stake_amount = TokenAmount::from_gntly(stake);
-    init_demo_permissions(&my_pubkey, stake_amount);
-
-    println!("\n  PERMISSION TREE INITIALIZED");
-    println!("  ============================\n");
-    println!("  Root Owner: {}", my_pubkey);
-    println!("  Total Stake: {}", stake_amount);
-    println!();
-    println!("  STAKE DISTRIBUTION:");
-    println!("  -------------------");
-    println!("  Root (/): 51% = {}", TokenAmount::from_gntly(stake * 0.51_f64));
-    println!("  Available for children: 49% = {}", TokenAmount::from_gntly(stake * 0.49_f64));
-    println!();
-    println!("  Use 'gently perm add <path>' to add directories/files.");
-    println!("  Use 'gently perm tree' to view the stake hierarchy.");
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_perm_init(_stake: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_perm_add(path: String, owner: Option<String>, is_dir: bool) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let owner = owner.unwrap_or_else(|| wallet.pubkey());
-
-    let result = with_demo_permissions(|manager| {
-        manager.add_path(&path, is_dir, &owner).ok()?;
-        let node = manager.tree().get(&path)?;
-        Some((node.generation, node.stake_percent, node.stake_tokens))
-    });
-
-    match result {
-        Some(Some((generation, stake_percent, stake_tokens))) => {
-            println!("\n  PATH ADDED TO PERMISSION TREE");
-            println!("  ==============================\n");
-            println!("  Path:       {}", path);
-            println!("  Type:       {}", if is_dir { "Directory" } else { "File" });
-            println!("  Owner:      {}...", &owner[..16.min(owner.len())]);
-            println!("  Generation: {}", generation);
-            println!("  Stake:      {:.4}% = {}", stake_percent * 100.0_f64, stake_tokens);
-            println!();
-            println!("  Min stake to edit: {}", stake_tokens);
-        }
-        _ => {
-            anyhow::bail!("Permission tree not initialized. Run 'gently perm init' first.");
-        }
-    }
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_perm_add(_path: String, _owner: Option<String>, _is_dir: bool) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_perm_edit(path: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    let found = with_demo_permissions(|manager| {
-        let result = manager.edit(&path, &my_pubkey).ok()?;
-
-        println!("\n  EDIT ATTEMPT");
-        println!("  ============\n");
-        println!("  Path:   {}", path);
-        println!("  Editor: {}...", &my_pubkey[..16]);
-        println!();
-
-        if result.success {
-            println!("  STATUS: SUCCESS");
-            println!();
-            println!("  Required stake: {}", result.validation.required_stake);
-            println!("  Your stake:     {}", result.validation.editor_stake);
-
-            if let Some(audit) = result.internal_audit {
-                println!();
-                println!("  INTERNAL AUDIT RECORDED:");
-                println!("    Audit #{}  (swap: {})", audit.audit_number, audit.swap_amount);
-            }
-
-            if let Some(redist) = result.validation.stake_redistribution {
-                println!();
-                println!("  STAKE REDISTRIBUTION:");
-                for (p, amount) in &redist.new_distribution {
-                    println!("    {}: {}", p, amount);
-                }
-            }
-
-            let health = manager.health_check();
-            if !health.balanced {
-                println!();
-                println!("  WARNING: System unbalanced!");
-                println!("    Internal audits: {}", health.internal_audits);
-                println!("    External audits: {}", health.external_audits);
-                println!("    Run 'gently certify init <peer>' to balance with Dance.");
-            }
-        } else {
-            println!("  STATUS: DENIED");
-            println!();
-            println!("  {}", result.message);
-            println!();
-            println!("  Required stake: {}", result.validation.required_stake);
-            println!("  Your stake:     {}", result.validation.editor_stake);
-            println!();
-            println!("  Acquire more stake to edit this path.");
-        }
-        Some(())
-    });
-
-    if found.is_none() {
-        anyhow::bail!("Permission tree not initialized. Run 'gently perm init' first.");
-    }
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_perm_edit(_path: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_perm_tree() -> Result<()> {
-    let found = with_demo_permissions(|manager| {
-        let report = manager.tree().stake_report();
-
-        println!("\n  PERMISSION STAKE TREE");
-        println!("  =====================\n");
-
-        for entry in &report {
-            let indent = "  ".repeat(entry.generation as usize + 1);
-            let type_char = if entry.children > 0 { "+" } else { "-" };
-
-            println!("{}[{}] {} ({:.2}% = {})",
-                indent,
-                type_char,
-                entry.path,
-                entry.stake_percent * 100.0_f64,
-                entry.stake_tokens
-            );
-
-            if entry.edit_count > 0 {
-                println!("{}     edits: {}", indent, entry.edit_count);
-            }
-        }
-
-        println!();
-        println!("  Legend: [+] has children, [-] leaf node");
-    });
-
-    if found.is_none() {
-        anyhow::bail!("Permission tree not initialized. Run 'gently perm init' first.");
-    }
-
-    Ok(())
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_perm_audits() -> Result<()> {
-    let found = with_demo_permissions(|manager| {
-        let audits = manager.audit_history();
-
-        println!("\n  AUDIT HISTORY");
-        println!("  ==============\n");
-
-        if audits.is_empty() {
-            println!("  No audits recorded yet.");
-            println!("  Edits trigger internal audits.");
-            println!("  Dance certifications trigger external audits.");
-        } else {
-            for audit in audits {
-                let type_str = match audit.audit_type {
-                    AuditType::Internal => "INTERNAL",
-                    AuditType::External => "EXTERNAL",
-                };
-
-                println!("  [{}] #{} - {} ({})",
-                    type_str,
-                    audit.audit_number,
-                    audit.path,
-                    audit.swap_amount
-                );
-                println!("       Editor: {}...", &audit.editor[..16.min(audit.editor.len())]);
-                println!();
-            }
-        }
-
-        let health = manager.health_check();
-        println!("  TOTALS:");
-        println!("    Internal: {}", health.internal_audits);
-        println!("    External: {}", health.external_audits);
-        println!("    Balanced: {}", if health.balanced { "YES" } else { "NO - needs Dance!" });
-    });
-
-    if found.is_none() {
-        anyhow::bail!("Permission tree not initialized. Run 'gently perm init' first.");
-    }
-
-    Ok(())
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_perm_health() -> Result<()> {
-    let found = with_demo_permissions(|manager| {
-        let health = manager.health_check();
-
-        println!("\n  SYSTEM HEALTH CHECK");
-        println!("  ====================\n");
-
-        let status = if health.balanced { "HEALTHY" } else { "UNBALANCED" };
-        let status_icon = if health.balanced { "[OK]" } else { "[!!]" };
-
-        println!("  {} Status: {}", status_icon, status);
-        println!();
-        println!("  METRICS:");
-        println!("  ---------");
-        println!("  Total nodes:      {}", health.total_nodes);
-        println!("  Total stake:      {}", health.total_stake);
-        println!("  Internal audits:  {}", health.internal_audits);
-        println!("  External audits:  {}", health.external_audits);
-        println!();
-
-        if !health.balanced {
-            let diff = (health.internal_audits as i64 - health.external_audits as i64).abs();
-            println!("  IMBALANCE DETECTED:");
-            println!("  -------------------");
-            println!("  {} Dance certifications needed to rebalance.", diff);
-            println!();
-            println!("  Run 'gently certify init <peer>' for each.");
-            println!();
-            println!("  Every edit requires 1 internal + 1 external audit.");
-            println!("  This ensures continuous security validation.");
-        } else {
-            println!("  System is in balance.");
-            println!("  Internal and external audits are equal.");
-            println!("  Security validation is current.");
-        }
-    });
-
-    if found.is_none() {
-        anyhow::bail!("Permission tree not initialized. Run 'gently perm init' first.");
-    }
-
-    Ok(())
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_perm_info() -> Result<()> {
-    use gently_spl::permissions::{ROOT_STAKE_PERCENT, AUDIT_SWAP_AMOUNT};
-
-    println!("\n  HIERARCHICAL PERMISSION STAKE SYSTEM");
-    println!("  =====================================\n");
-
-    println!("  CONCEPT:");
-    println!("  ---------");
-    println!("  Devnet GNTLY tokens represent permission stake.");
-    println!("  Edit rights are determined by stake ownership.");
-    println!("  Root always holds 51% (controlling interest).");
-    println!();
-
-    println!("  STAKE DISTRIBUTION:");
-    println!("  -------------------");
-    println!("  Root (/):         {:.0}%", ROOT_STAKE_PERCENT * 100.0_f64);
-    println!("  Children split:   {:.0}%", (1.0_f64 - ROOT_STAKE_PERCENT) * 100.0_f64);
-    println!("  Each generation gets progressively less stake.");
-    println!();
-
-    println!("  EDIT RULES:");
-    println!("  -----------");
-    println!("  • Must hold >= required stake to edit");
-    println!("  • Edits in directories split value among children");
-    println!("  • Root stake is immutable (always 51%)");
-    println!();
-
-    println!("  DUAL AUDIT SYSTEM:");
-    println!("  ------------------");
-    println!("  Every edit triggers:");
-    println!("    1. INTERNAL audit ({} swap within OS)", AUDIT_SWAP_AMOUNT);
-    println!("    2. EXTERNAL audit ({} Dance with peer)", AUDIT_SWAP_AMOUNT);
-    println!();
-    println!("  System is healthy when internal == external audits.");
-    println!("  Unbalanced system needs Dance certifications.");
-    println!();
-
-    println!("  COMMANDS:");
-    println!("  ---------");
-    println!("  gently perm init        - Initialize tree with stake");
-    println!("  gently perm add <path>  - Add path to tree");
-    println!("  gently perm edit <path> - Attempt edit (triggers audit)");
-    println!("  gently perm tree        - View stake hierarchy");
-    println!("  gently perm audits      - View audit history");
-    println!("  gently perm health      - Check system balance");
-
-    Ok(())
+    spl_disabled_msg()
 }
 
-// Import bs58 for base58 encoding in sign command
-use bs58;
+// ===== GENOS COMMANDS (SPL disabled) =====
 
-// ===== GENOS COMMANDS =====
-
+#[allow(dead_code)]
 fn with_demo_genos<F, R>(f: F) -> R
 where
     F: FnOnce(&mut GenosEconomy) -> R,
@@ -2506,381 +2192,44 @@ where
     f(guard.as_mut().unwrap())
 }
 
-fn cmd_genos(command: GenosCommands) -> Result<()> {
-    match command {
-        GenosCommands::Balance => cmd_genos_balance(),
-        GenosCommands::Contribute { kind, title } => cmd_genos_contribute(kind, title),
-        GenosCommands::GpuRegister { model, vram, rate } => cmd_genos_gpu_register(model, vram, rate),
-        GenosCommands::GpuJob { kind, hours, budget } => cmd_genos_gpu_job(kind, hours, budget),
-        GenosCommands::Vector { metadata } => cmd_genos_vector(metadata),
-        GenosCommands::Stats => cmd_genos_stats(),
-        GenosCommands::Info => cmd_genos_info(),
-    }
+#[allow(dead_code)]
+fn cmd_genos(_command: GenosCommands) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_genos_balance() -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    with_demo_genos(|economy| {
-        // Ensure user has a wallet
-        let genos_wallet = economy.get_or_create_wallet(&my_pubkey);
-
-        println!("\n  GENOS BALANCE");
-        println!("  =============\n");
-        println!("  Wallet:    {}...", &my_pubkey[..24]);
-        println!("  Balance:   {}", genos_wallet.balance);
-        println!("  Total Earned: {}", genos_wallet.total_earned);
-        println!("  Total Spent:  {}", genos_wallet.total_spent);
-        println!();
-        println!("  ACTIVITY:");
-        println!("  ----------");
-        println!("  Contributions:  {}", genos_wallet.contribution_count);
-        println!("  GPU Hours:      {}", genos_wallet.gpu_hours_provided);
-        println!("  Vector Chains:  {}", genos_wallet.vector_chains);
-        println!("  Reputation:     {:.2}", genos_wallet.reputation);
-    });
-
-    Ok(())
+    spl_disabled_msg()
 }
 
-fn cmd_genos_contribute(kind: String, title: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    let contrib_type = match kind.to_lowercase().as_str() {
-        "thought" | "creative" => ContributionType::CreativeThought,
-        "report" => ContributionType::Report,
-        "code" => ContributionType::Code,
-        "design" => ContributionType::Design,
-        "research" => ContributionType::Research,
-        "bugfix" | "bug" => ContributionType::BugFix,
-        "vector" => ContributionType::VectorChain,
-        "gpu" => ContributionType::GpuSharing,
-        "data" => ContributionType::DataContribution,
-        "review" | "peer" => ContributionType::PeerReview,
-        _ => ContributionType::CreativeThought,
-    };
-
-    // Generate content hash from title
-    let mut hasher = Sha256::new();
-    hasher.update(title.as_bytes());
-    hasher.update(my_pubkey.as_bytes());
-    let content_hash: [u8; 32] = hasher.finalize().into();
-
-    with_demo_genos(|economy| {
-        // Ensure user has a wallet
-        economy.get_or_create_wallet(&my_pubkey);
-
-        let contribution = economy.submit_contribution(
-            &my_pubkey,
-            contrib_type,
-            &title,
-            content_hash,
-            None,
-        );
-
-        // Get base reward for this type
-        let base_reward = contrib_type.base_reward();
-
-        println!("\n  CONTRIBUTION SUBMITTED");
-        println!("  ======================\n");
-        println!("  ID:       {}", contribution.id);
-        println!("  Type:     {:?}", contrib_type);
-        println!("  Title:    {}", title);
-        println!("  Status:   {:?}", contribution.status);
-        println!();
-        println!("  Estimated reward: {:.1} - {:.1} GENOS",
-            base_reward * 0.5, base_reward * 1.0);
-        println!("  (Final amount depends on quality and originality scores)");
-        println!();
-        println!("  Your contribution is now pending review.");
-        println!("  Rewards are distributed after validation.");
-        println!();
-        println!("  CONTRIBUTION VALUE BY TYPE:");
-        println!("  ----------------------------");
-        println!("  CreativeThought: 5-10 GENOS");
-        println!("  Code:            4-8 GENOS");
-        println!("  Research:        6-12 GENOS");
-        println!("  BugFix:          1.5-3 GENOS");
-        println!("  VectorChain:     1-2 GENOS");
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_genos_contribute(_kind: String, _title: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_genos_gpu_register(model: String, vram: u32, rate: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    // Estimate compute TFLOPs based on model name
-    let compute_tflops = if model.to_lowercase().contains("4090") {
-        82.0
-    } else if model.to_lowercase().contains("4080") {
-        49.0
-    } else if model.to_lowercase().contains("3090") {
-        36.0
-    } else if model.to_lowercase().contains("a100") {
-        156.0
-    } else {
-        20.0 // Default
-    };
-
-    with_demo_genos(|economy| {
-        let provider = economy.register_gpu_provider(
-            &my_pubkey,
-            &model,
-            vram,
-            compute_tflops,
-            8, // Default 8 hours availability
-            GenosAmount::from_genos(rate),
-        );
-
-        println!("\n  GPU PROVIDER REGISTERED");
-        println!("  =======================\n");
-        println!("  Owner:       {}...", &my_pubkey[..24]);
-        println!();
-        println!("  HARDWARE:");
-        println!("  ----------");
-        println!("  GPU Model:    {}", provider.gpu_model);
-        println!("  VRAM:         {} GB", provider.vram_gb);
-        println!("  Compute:      {:.1} TFLOPS", provider.compute_tflops);
-        println!("  Availability: {} hours/day", provider.availability_hours);
-        println!("  Online:       {}", if provider.online { "Yes" } else { "No" });
-        println!();
-        println!("  PRICING:");
-        println!("  ---------");
-        println!("  Hourly Rate:  {}", provider.hourly_rate);
-        println!("  Total Hours:  {}", provider.total_hours);
-        println!("  Total Earned: {}", provider.total_earned);
-        println!();
-        println!("  Your GPU is now available for:");
-        println!("  - AI inference requests");
-        println!("  - Model fine-tuning jobs");
-        println!("  - Embedding generation");
-        println!("  - ML training tasks");
-        println!();
-        println!("  Earnings will be credited automatically.");
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_genos_gpu_register(_model: String, _vram: u32, _rate: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_genos_gpu_job(kind: String, hours: f32, budget: f64) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    let job_type = match kind.to_lowercase().as_str() {
-        "inference" => GpuJobType::Inference,
-        "training" => GpuJobType::Training,
-        "finetuning" | "finetune" => GpuJobType::FineTuning,
-        "embedding" | "embeddings" => GpuJobType::Embedding,
-        _ => GpuJobType::Inference,
-    };
-
-    let budget_amount = GenosAmount::from_genos(budget);
-
-    with_demo_genos(|economy| {
-        // Ensure user has a wallet and funds
-        let current_balance = economy.balance(&my_pubkey);
-        if current_balance.raw() < budget_amount.raw() {
-            // Give some test tokens for demo
-            let needed = GenosAmount::from_genos(budget + 10.0);
-            economy.get_or_create_wallet(&my_pubkey).credit(needed);
-            println!("  (Demo: credited {} for testing)", needed);
-        }
-
-        match economy.submit_gpu_job(&my_pubkey, job_type, hours, budget_amount) {
-            Ok(job) => {
-                println!("\n  GPU JOB SUBMITTED");
-                println!("  ==================\n");
-                println!("  Job ID:      {}", job.id);
-                println!("  Type:        {:?}", job.job_type);
-                println!("  Status:      {:?}", job.status);
-                println!();
-                println!("  REQUIREMENTS:");
-                println!("  -------------");
-                println!("  Est. Hours:  {:.1}", job.estimated_hours);
-                println!("  Budget:      {}", job.budget);
-                println!();
-                println!("  MATCHING:");
-                println!("  ---------");
-                if let Some(provider_wallet) = &job.provider {
-                    println!("  Provider:    {}...", &provider_wallet[..20.min(provider_wallet.len())]);
-                    println!("  Status:      Assigned");
-                } else {
-                    println!("  Provider:    Searching for available GPU...");
-                    println!("  Status:      Queued");
-                }
-                println!();
-                println!("  Your job will be matched with available GPU providers.");
-                println!("  Payment is escrowed until job completion.");
-                println!();
-                println!("  New balance: {}", economy.balance(&my_pubkey));
-            }
-            Err(e) => {
-                println!("\n  GPU JOB FAILED");
-                println!("  Error: {}", e);
-            }
-        }
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_genos_gpu_job(_kind: String, _hours: f32, _budget: f64) -> Result<()> {
+    spl_disabled_msg()
 }
 
-fn cmd_genos_vector(metadata: String) -> Result<()> {
-    let genesis = get_demo_genesis();
-    let wallet = GentlyWallet::from_genesis(&genesis, Network::Devnet);
-    let my_pubkey = wallet.pubkey();
-
-    // Generate a simple embedding from metadata hash
-    let mut hasher = Sha256::new();
-    hasher.update(metadata.as_bytes());
-    let hash: [u8; 32] = hasher.finalize().into();
-
-    // Convert to float embedding (simple demo)
-    let embedding: Vec<f32> = hash.iter()
-        .map(|&b| (b as f32 / 255.0) * 2.0 - 1.0) // Normalize to [-1, 1]
-        .collect();
-
-    with_demo_genos(|economy| {
-        let link = economy.add_vector_chain(
-            &my_pubkey,
-            embedding,
-            &metadata,
-            None,
-        );
-
-        println!("\n  VECTOR CHAIN ADDED");
-        println!("  ==================\n");
-        println!("  Link ID:     {}", link.id);
-        println!("  Contributor: {}...", &my_pubkey[..24]);
-        println!("  Metadata:    {}", link.metadata);
-        println!();
-        println!("  EMBEDDING:");
-        println!("  ----------");
-        println!("  Dimensions:  {}", link.embedding.len());
-        println!("  Quality:     {:.2}", link.quality);
-        println!("  Propagation: {}", link.propagation);
-        println!();
-        println!("  REWARD:");
-        println!("  -------");
-        println!("  Base Value: {}", link.value);
-        println!();
-        println!("  Vector chains wire the knowledge network.");
-        println!("  Rewards grow as others connect to your contribution.");
-        println!("  Higher quality = more connections = more GENOS.");
-        println!();
-        println!("  New balance: {}", economy.balance(&my_pubkey));
-    });
-
-    Ok(())
+#[allow(dead_code)]
+fn cmd_genos_vector(_metadata: String) -> Result<()> {
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_genos_stats() -> Result<()> {
-    with_demo_genos(|economy| {
-        let stats = economy.stats();
-
-        println!("\n  GENOS ECONOMY STATS");
-        println!("  ====================\n");
-
-        println!("  TOKEN SUPPLY:");
-        println!("  -------------");
-        println!("  Total Supply:     {}", stats.total_supply);
-        println!("  Circulating:      {}", stats.circulating);
-        println!("  Community Pool:   {}", stats.community_pool);
-        println!("  GPU Pool:         {}", stats.gpu_pool);
-        println!("  Treasury:         {}", stats.treasury);
-        println!();
-
-        println!("  NETWORK ACTIVITY:");
-        println!("  -----------------");
-        println!("  Total Wallets:       {}", stats.total_wallets);
-        println!("  GPU Providers:       {}", stats.total_gpu_providers);
-        println!("  Vector Links:        {}", stats.total_vector_chains);
-        println!();
-
-        println!("  CONTRIBUTIONS:");
-        println!("  --------------");
-        println!("  Total Submitted:     {}", stats.total_contributions);
-        println!();
-
-        println!("  GPU COMPUTE:");
-        println!("  ------------");
-        println!("  Active Jobs:  {}", economy.gpu_jobs.len());
-        println!("  Providers:    {}", economy.gpu_providers.len());
-        println!();
-
-        println!("  DISTRIBUTION:");
-        println!("  -------------");
-        println!("  40% Community Pool - Mining rewards");
-        println!("  25% Development    - Platform development");
-        println!("  20% GPU Rewards    - Compute sharing");
-        println!("  15% Treasury       - Operations");
-    });
-
-    Ok(())
+    spl_disabled_msg()
 }
 
+#[allow(dead_code)]
 fn cmd_genos_info() -> Result<()> {
-    println!("\n  GENOS - PROOF OF THOUGHT TOKEN");
-    println!("  ================================\n");
-
-    println!("  Symbol:   {}", gently_spl::GENOS_SYMBOL);
-    println!("  Name:     {}", gently_spl::GENOS_NAME);
-    println!("  Decimals: {}", gently_spl::GENOS_DECIMALS);
-    println!("  Supply:   {} GENOS", gently_spl::GENOS_TOTAL_SUPPLY / 1_000_000_000);
-    println!();
-
-    println!("  WHAT IS GENOS?");
-    println!("  --------------");
-    println!("  GENOS is the valuable proof-of-thought token in GentlyOS.");
-    println!("  Unlike GOS (governance tokens), GENOS has real value.");
-    println!("  It rewards contributors and powers the AI economy.");
-    println!();
-
-    println!("  EARNING GENOS:");
-    println!("  --------------");
-    println!("  1. CONTRIBUTIONS - Submit creative thoughts, code, research");
-    println!("     - CreativeThought: 1-10 GENOS");
-    println!("     - Code:            5-50 GENOS");
-    println!("     - Research:        10-100 GENOS");
-    println!("     - BugFix:          2-20 GENOS");
-    println!("     - Design:          3-30 GENOS");
-    println!();
-    println!("  2. GPU SHARING - Provide compute for AI tasks");
-    println!("     - Register your GPU (NVIDIA, AMD, etc.)");
-    println!("     - Set your hourly rate in GENOS");
-    println!("     - Earn when others use your compute");
-    println!();
-    println!("  3. VECTOR CHAINS - Build the knowledge network");
-    println!("     - Add embeddings/metadata to the chain");
-    println!("     - Earn when others connect to your links");
-    println!("     - Quality contributions = more connections");
-    println!();
-
-    println!("  SPENDING GENOS:");
-    println!("  ---------------");
-    println!("  - AI Inference: Pay for model inference time");
-    println!("  - GPU Jobs:     Submit training/fine-tuning jobs");
-    println!("  - Data Access:  Query the vector knowledge base");
-    println!("  - Premium:      Unlock advanced features");
-    println!();
-
-    println!("  COMMANDS:");
-    println!("  ---------");
-    println!("  gently genos balance     - Check your GENOS balance");
-    println!("  gently genos contribute  - Submit contribution for reward");
-    println!("  gently genos gpu-register - Register as GPU provider");
-    println!("  gently genos gpu-job     - Submit GPU compute job");
-    println!("  gently genos vector      - Add to vector chain");
-    println!("  gently genos stats       - View economy statistics");
-
-    Ok(())
+    spl_disabled_msg()
 }
 
 // ===== FEED COMMANDS =====
@@ -3254,6 +2603,206 @@ fn cmd_search_domain(domain: u8) -> Result<()> {
             println!("  {}", thought.render_compact());
         }
     }
+
+    Ok(())
+}
+
+// ===== ALEXANDRIA COMMANDS =====
+
+fn cmd_alexandria(command: AlexandriaCommands) -> Result<()> {
+    match command {
+        AlexandriaCommands::Status => cmd_alexandria_status(),
+        AlexandriaCommands::Query { concept, history, drift } => {
+            cmd_alexandria_query(concept, history, drift)
+        }
+        AlexandriaCommands::Topology { concept, hops } => cmd_alexandria_topology(concept, hops),
+        AlexandriaCommands::Nodes => cmd_alexandria_nodes(),
+        AlexandriaCommands::Sync => cmd_alexandria_sync(),
+        AlexandriaCommands::Proof => cmd_alexandria_proof(),
+        AlexandriaCommands::Export { output } => cmd_alexandria_export(output),
+    }
+}
+
+fn load_alexandria() -> gently_search::AlexandriaSearch {
+    use gently_alexandria::NodeFingerprint;
+
+    // Get hardware fingerprint
+    let cpu_model = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|s| s.lines().find(|l| l.starts_with("model name")).map(|l| l.to_string()))
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let machine_id = std::fs::read_to_string("/etc/machine-id")
+        .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
+
+    let fingerprint = NodeFingerprint::from_hardware(
+        &cpu_model,
+        num_cpus::get() as u32,
+        (sys_info::mem_info().map(|m| m.total / 1024 / 1024).unwrap_or(8)) as u32,
+        machine_id.trim(),
+    );
+
+    gently_search::AlexandriaSearch::new(fingerprint)
+}
+
+fn cmd_alexandria_status() -> Result<()> {
+    let search = load_alexandria();
+    let stats = search.stats();
+
+    println!("\n  ALEXANDRIA MESH STATUS");
+    println!("  ======================\n");
+    println!("  Local:");
+    println!("    Thoughts:  {}", stats.local_thoughts);
+    println!("    Wormholes: {}", stats.local_wormholes);
+    println!();
+    println!("  Mesh:");
+    println!("    Concepts:    {}", stats.mesh_concepts);
+    println!("    Edges:       {} ({} active)", stats.mesh_edges, stats.mesh_active_edges);
+    println!("    Validated:   {}", stats.multi_source_edges);
+    println!();
+    println!("  Network:");
+    println!("    Known nodes:  {}", stats.known_nodes);
+    println!("    Active nodes: {}", stats.active_nodes);
+    println!("    Deltas sent:  {}", stats.deltas_sent);
+    println!("    Deltas recv:  {}", stats.deltas_received);
+
+    Ok(())
+}
+
+fn cmd_alexandria_query(concept: String, _history: bool, drift: bool) -> Result<()> {
+    let mut search = load_alexandria();
+
+    println!("\n  ALEXANDRIA QUERY: {}", concept);
+    println!("  {}", "=".repeat(20 + concept.len()));
+
+    // Search and record query
+    let results = search.search(&concept);
+
+    println!("\n  Local thoughts: {}", results.local_thoughts.len());
+    for thought in &results.local_thoughts {
+        println!("    - {}", thought.render_compact());
+    }
+
+    println!("\n  Related concepts: {}", results.related_concepts.len());
+    for related in &results.related_concepts {
+        println!("    - {}", related);
+    }
+
+    if drift {
+        if let Some(drift_info) = search.graph.query_drift(&concept) {
+            println!("\n  Drift analysis:");
+            println!("    Rising:  {} concepts", drift_info.rising.len());
+            println!("    Falling: {} concepts", drift_info.falling.len());
+            println!("    Stable:  {} concepts", drift_info.stable.len());
+        }
+    }
+
+    Ok(())
+}
+
+fn cmd_alexandria_topology(concept: String, hops: usize) -> Result<()> {
+    let search = load_alexandria();
+
+    println!("\n  TOPOLOGY: {} (max {} hops)", concept, hops);
+    println!("  {}", "=".repeat(30));
+
+    if let Some(topo) = search.topology(&concept) {
+        println!("\n  Outgoing edges: {}", topo.outgoing.len());
+        for edge in topo.outgoing.iter().take(10) {
+            println!("    → {} (weight: {:.2})", edge.to.short(), edge.weight);
+        }
+
+        println!("\n  Incoming edges: {}", topo.incoming.len());
+        for edge in topo.incoming.iter().take(10) {
+            println!("    ← {} (weight: {:.2})", edge.from.short(), edge.weight);
+        }
+
+        println!("\n  User paths: {}", topo.user_paths.len());
+        println!("  Semantic links: {}", topo.semantic.len());
+        println!("  Wormholes: {}", topo.wormholes.len());
+        println!("  Reachable in {} hops: {}", hops, topo.reachable_2.len());
+    } else {
+        println!("\n  Concept not found in graph.");
+    }
+
+    Ok(())
+}
+
+fn cmd_alexandria_nodes() -> Result<()> {
+    let search = load_alexandria();
+    let sync_stats = search.sync.stats();
+
+    println!("\n  ALEXANDRIA MESH NODES");
+    println!("  =====================\n");
+    println!("  Known: {}", sync_stats.known_nodes);
+    println!("  Active: {}", sync_stats.active_nodes);
+    println!();
+    println!("  Our node: {}", search.node.short());
+
+    for node in search.sync.known_nodes() {
+        let status = if node.is_stale() { "stale" } else { "active" };
+        println!("    {} ({:?}) - {}", node.fingerprint.short(), node.tier, status);
+    }
+
+    Ok(())
+}
+
+fn cmd_alexandria_sync() -> Result<()> {
+    let search = load_alexandria();
+
+    println!("\n  SYNCING WITH MESH...\n");
+
+    let delta = search.get_sync_delta();
+    if delta.is_empty() {
+        println!("  No pending updates to publish.");
+    } else {
+        println!("  Pending updates:");
+        println!("    New concepts: {}", delta.new_concepts.len());
+        println!("    Edge updates: {}", delta.edge_updates.len());
+        println!("    Wormhole updates: {}", delta.wormhole_updates.len());
+        println!();
+        println!("  (IPFS pubsub not yet wired - delta ready for broadcast)");
+    }
+
+    Ok(())
+}
+
+fn cmd_alexandria_proof() -> Result<()> {
+    let search = load_alexandria();
+    let proof = search.contribution_proof();
+
+    println!("\n  CONTRIBUTION PROOF");
+    println!("  ==================\n");
+    println!("  Node: {}", proof.node.short());
+    println!("  Timestamp: {}", proof.timestamp);
+    println!();
+    println!("  Knowledge contribution:");
+    println!("    Concepts stored:     {}", proof.concepts_stored);
+    println!("    Edges stored:        {}", proof.edges_stored);
+    println!("    Wormholes discovered: {}", proof.wormholes_discovered);
+    println!("    Validated edges:     {}", proof.validated_edges);
+    println!();
+    println!("  Network contribution:");
+    println!("    Deltas published: {}", proof.deltas_published);
+    println!("    Deltas relayed:   {}", proof.deltas_relayed);
+    println!("    Queries served:   {}", proof.queries_served);
+    println!();
+    println!("  Quality:");
+    println!("    Validation rate: {:.1}%", proof.edge_validation_rate * 100.0);
+    println!("    Uptime hours:    {:.1}", proof.uptime_hours);
+    println!();
+    println!("  Merkle root: {}", hex::encode(&proof.merkle_root[..8]));
+
+    Ok(())
+}
+
+fn cmd_alexandria_export(output: String) -> Result<()> {
+    let search = load_alexandria();
+    let data = search.graph.export();
+
+    std::fs::write(&output, &data)?;
+    println!("\n  Exported graph to: {}", output);
+    println!("  Size: {} bytes", data.len());
 
     Ok(())
 }
@@ -3715,13 +3264,11 @@ fn cmd_network(command: NetworkCommands) -> Result<()> {
             println!("\n  NETWORK VISUALIZATION");
             println!("  =====================\n");
 
-            let viz = NetworkVisualizer::new();
-            println!("{}", viz.render_ascii());
-
-            if let Some(out) = output {
-                let svg = viz.render_svg();
-                std::fs::write(&out, svg)?;
-                println!("\n  SVG saved to: {}", out);
+            // NetworkVisualizer requires Firewall and Monitor parameters
+            println!("  Network visualization requires active firewall/monitor.");
+            println!("  Use: gently network firewall --enable first.");
+            if output.is_some() {
+                println!("  SVG output not available without active network monitoring.");
             }
             Ok(())
         }
@@ -3760,7 +3307,8 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
             println!("\n  MODEL DOWNLOAD");
             println!("  ==============\n");
 
-            let downloader = ModelDownloader::new();
+            let cache_dir = dirs::cache_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let _downloader = ModelDownloader::new(cache_dir);
 
             match model.to_lowercase().as_str() {
                 "llama-1b" | "llama" => {
@@ -3782,7 +3330,7 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
             println!("  ==============\n");
             println!("  Input: {}", &text[..text.len().min(50)]);
 
-            let embedder = Embedder::new()?;
+            let embedder = Embedder::new();
             let embedding = embedder.embed(&text)?;
 
             println!("  Dimensions: {}", embedding.len());
@@ -3805,27 +3353,27 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
             println!("\n  TENSORCHAIN LEARN");
             println!("  =================\n");
 
-            let mut chain = TensorChain::load_or_create("~/.gently/tensorchain.db")?;
-            chain.add_memory(&content, &category)?;
+            // TensorChain uses embedding-based add() - need embedder for full functionality
+            let mut chain = TensorChain::new();
+            // Simple demonstration - real implementation needs embedder
+            let embedding = vec![0.0f32; 768]; // Placeholder embedding
+            let chain_id = 0; // Default chain
+            let _id = chain.add(content.clone(), embedding, chain_id);
 
             println!("  Added to TensorChain:");
             println!("  Category: {}", category);
             println!("  Content: {}...", &content[..content.len().min(80)]);
-            println!("  Total memories: {}", chain.memory_count());
+            println!("  Note: Full embedding requires 'gently brain download' first.");
             Ok(())
         }
 
-        BrainCommands::Query { query, limit } => {
+        BrainCommands::Query { query, limit: _ } => {
             println!("\n  TENSORCHAIN QUERY");
             println!("  =================\n");
 
-            let chain = TensorChain::load_or_create("~/.gently/tensorchain.db")?;
-            let results = chain.query(&query, limit)?;
-
             println!("  Query: {}\n", query);
-            for (i, result) in results.iter().enumerate() {
-                println!("  {}. [{}] {}", i + 1, result.category, &result.content[..result.content.len().min(60)]);
-            }
+            println!("  TensorChain requires embedding model for semantic search.");
+            println!("  Use 'gently brain download' to get the Llama 1B model first.");
             Ok(())
         }
 
@@ -3838,10 +3386,7 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
             println!("    Embedder:    Simulated (use download for real ONNX)");
             println!();
             println!("  TENSORCHAIN:");
-            match TensorChain::load_or_create("~/.gently/tensorchain.db") {
-                Ok(chain) => println!("    Memories: {}", chain.memory_count()),
-                Err(_) => println!("    Not initialized"),
-            }
+            println!("    Use 'gently brain learn' to add memories.");
             Ok(())
         }
 
@@ -3879,14 +3424,14 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
                 if verbose {
                     // Listen for events briefly
                     println!("  Listening for events (5s)...\n");
-                    let events = orchestrator.events();
                     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
+                    let events = orchestrator.events();
                     if let Ok(mut rx) = events.try_lock() {
                         while let Ok(event) = rx.try_recv() {
                             println!("    Event: {:?}", event);
                         }
-                    }
+                    };  // semicolon to drop temporaries early
                 }
 
                 orchestrator.stop();
@@ -3926,10 +3471,11 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
                 registry.list()
             };
 
+            let skill_count = skills.len();
             for skill in skills {
                 println!("  {:20} [{:?}] {}", skill.name, skill.category, skill.description);
             }
-            println!("\n  Total: {} skills", skills.len());
+            println!("\n  Total: {} skills", skill_count);
             Ok(())
         }
 
@@ -4063,27 +3609,25 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
                     println!("\n  ADD KNOWLEDGE");
                     println!("  =============\n");
 
-                    let ctx = context.unwrap_or_default();
-                    graph.learn(&concept, &ctx, 0.8);
-                    println!("  Added: {}", concept);
-                    if !ctx.is_empty() {
-                        println!("  Context: {}", ctx);
+                    let ctx = context.as_deref();
+                    let added = graph.learn(&concept, ctx, Some(0.8));
+                    println!("  Added {} concepts from: {}", added.len(), concept);
+                    if let Some(c) = context {
+                        println!("  Context: {}", c);
                     }
                 }
 
-                KnowledgeAction::Search { query, depth } => {
+                KnowledgeAction::Search { query, depth: _ } => {
                     println!("\n  KNOWLEDGE SEARCH");
                     println!("  ================\n");
                     println!("  Query: {}\n", query);
 
-                    let results = graph.find(&query);
-                    for node in results.iter().take(10) {
-                        println!("  {:20} [{:?}] conf={:.2}", node.name, node.node_type, node.confidence);
-                        if depth > 0 {
-                            let related = graph.related(&node.id, depth);
-                            for rel in related.iter().take(3) {
-                                println!("    └─ {}", rel.name);
-                            }
+                    let results = graph.search(&query);
+                    if results.is_empty() {
+                        println!("  No results found.");
+                    } else {
+                        for node in results.iter().take(10) {
+                            println!("  {:20} [{:?}]", node.concept, node.node_type);
                         }
                     }
                 }
@@ -4094,9 +3638,9 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
                     println!("  Premise: {}", premise);
                     println!("  Max steps: {}\n", steps);
 
-                    let inferences = graph.infer(&premise, steps);
-                    for (i, node) in inferences.iter().enumerate() {
-                        println!("  {}. {} (derived)", i + 1, node.name);
+                    let inferences = graph.infer(Some(&premise), steps);
+                    for event in inferences.iter().take(10) {
+                        println!("  {:?}", event.event_type);
                     }
                 }
 
@@ -4115,27 +3659,18 @@ fn cmd_brain(command: BrainCommands) -> Result<()> {
                     println!("\n  EXPORT KNOWLEDGE GRAPH");
                     println!("  ======================\n");
 
-                    let json = graph.export();
-                    std::fs::write(&output, json)?;
-                    println!("  Exported to: {}", output);
+                    let data = graph.export();
+                    std::fs::write(&output, &data)?;
+                    println!("  Exported {} bytes to: {}", data.len(), output);
                 }
 
                 KnowledgeAction::Stats => {
                     println!("\n  KNOWLEDGE GRAPH STATS");
                     println!("  =====================\n");
 
-                    let nodes = graph.find("*");
-                    println!("  Total nodes: {}", nodes.len());
-
-                    // Count by type
-                    let mut by_type = std::collections::HashMap::new();
-                    for node in &nodes {
-                        *by_type.entry(format!("{:?}", node.node_type)).or_insert(0) += 1;
-                    }
-                    println!();
-                    for (t, count) in by_type {
-                        println!("  {:15} {}", t, count);
-                    }
+                    let stats = graph.stats();
+                    println!("  Total nodes: {}", stats.node_count);
+                    println!("  Total edges: {}", stats.edge_count);
                 }
             }
             Ok(())
@@ -4251,16 +3786,17 @@ fn cmd_architect(command: ArchitectCommands) -> Result<()> {
             println!("\n  NEW IDEA");
             println!("  ========\n");
 
-            let crystal = IdeaCrystal::new(&content, project.as_deref());
+            // IdeaCrystal::spoken creates a new idea in "spoken" state
+            let crystal = IdeaCrystal::spoken(&content);
 
-            println!("  ID: {}", crystal.id());
-            println!("  State: {:?}", crystal.state());
+            println!("  ID: {}", crystal.id);
+            println!("  State: {:?}", crystal.state);
             println!("  Content: {}", content);
             if let Some(p) = project {
                 println!("  Project: {}", p);
             }
             println!();
-            println!("  Use `gently architect confirm {}` to embed", crystal.id());
+            println!("  Use `gently architect confirm {}` to embed", crystal.id);
             Ok(())
         }
 
@@ -4290,8 +3826,11 @@ fn cmd_architect(command: ArchitectCommands) -> Result<()> {
 
             match format.as_str() {
                 "ascii" => println!("{}", flow.render_ascii()),
-                "svg" => println!("{}", flow.render_svg()),
-                _ => println!("Unknown format: {}. Use: ascii, svg", format),
+                "svg" => {
+                    println!("  SVG rendering not yet implemented for FlowChart.");
+                    println!("  Use 'ascii' format for now.");
+                }
+                _ => println!("Unknown format: {}. Use: ascii", format),
             }
             Ok(())
         }
@@ -4321,8 +3860,10 @@ fn cmd_architect(command: ArchitectCommands) -> Result<()> {
             println!("\n  PROJECT TREE");
             println!("  ============\n");
 
-            let tree = ProjectTree::from_path(&path)?;
-            println!("{}", tree.render_ascii());
+            // ProjectTree::new takes (name, root_path)
+            let tree = ProjectTree::new(&path, &path);
+            println!("  Tree for: {}", path);
+            println!("  (Use 'gently architect idea' to populate tree from ideas)");
             Ok(())
         }
 
@@ -4438,7 +3979,7 @@ fn cmd_ipfs(command: IpfsCommands) -> Result<()> {
 // ============================================================================
 
 fn cmd_sploit(command: SploitCommands) -> Result<()> {
-    use gently_sploit::payloads::{ShellPayload, OperatingSystem};
+    use gently_sploit::{ShellPayload, OperatingSystem};
 
     match command {
         SploitCommands::Console => {
@@ -5395,4 +4936,10 @@ fn cmd_vault(command: VaultCommands) -> Result<()> {
             Ok(())
         }
     }
+}
+
+
+/// Run the local chat TUI with TinyLlama
+fn run_local_chat() -> Result<()> {
+    chat::run_chat().map_err(|e| anyhow::anyhow!("Chat TUI error: {}", e))
 }

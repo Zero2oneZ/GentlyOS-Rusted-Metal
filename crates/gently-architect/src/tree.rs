@@ -148,7 +148,7 @@ impl ProjectTree {
             format!("{}│   ", prefix)
         };
 
-        let mut children: Vec<_> = self.children(path).collect();
+        let mut children: Vec<_> = self.children(path);
         children.sort_by(|a, b| {
             // Directories first, then files
             match (&a.kind, &b.kind) {

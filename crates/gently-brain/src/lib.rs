@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! GentlyOS Brain
 //!
 //! Self-evolving AI system with:
@@ -22,6 +24,7 @@ pub mod claude;
 pub mod skills;
 pub mod daemon;
 pub mod knowledge;
+pub mod learner;
 pub mod mcp;
 pub mod orchestrator;
 pub mod pipeline;
@@ -40,6 +43,7 @@ pub use claude::{ClaudeClient, ClaudeModel, ClaudeSession, GentlyAssistant, Mess
 pub use skills::{Skill, SkillRegistry, SkillResult, SkillCategory, SkillHandler, SkillContext};
 pub use daemon::{DaemonManager, DaemonType, DaemonEvent, AwarenessState};
 pub use knowledge::{KnowledgeGraph, KnowledgeNode, NodeType, EdgeType};
+pub use learner::{ConversationLearner, LearnedConcept, LearningResult};
 pub use mcp::{McpToolRegistry, Tool, ToolCategory, ToolResult, ToolExecutor};
 pub use orchestrator::{BrainOrchestrator, BrainConfig, ProcessingResult};
 pub use pipeline::{BlobPipeline, PipelineConfig, SyncJob, SyncResult};

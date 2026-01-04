@@ -20,7 +20,7 @@ impl IpfsOps {
         let json = serde_json::to_vec(thought)
             .map_err(|e| Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
 
-        let cid = self.client.add(&json, ContentType::Thought).await?;
+        let cid = self.client.add(&json).await?;
 
         Ok(ContentAddress {
             cid,
@@ -35,7 +35,7 @@ impl IpfsOps {
         let json = serde_json::to_vec(embedding)
             .map_err(|e| Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
 
-        let cid = self.client.add(&json, ContentType::Embedding).await?;
+        let cid = self.client.add(&json).await?;
 
         Ok(ContentAddress {
             cid,
@@ -48,7 +48,7 @@ impl IpfsOps {
     /// Store encrypted KEY for NFT distribution
     pub async fn store_encrypted_key(&self, key_data: &[u8]) -> Result<ContentAddress> {
         // Keys MUST be encrypted
-        let cid = self.client.add(key_data, ContentType::EncryptedKey).await?;
+        let cid = self.client.add(key_data).await?;
 
         Ok(ContentAddress {
             cid,
@@ -63,7 +63,7 @@ impl IpfsOps {
         let json = serde_json::to_vec(session)
             .map_err(|e| Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
 
-        let cid = self.client.add(&json, ContentType::SessionState).await?;
+        let cid = self.client.add(&json).await?;
 
         Ok(ContentAddress {
             cid,
@@ -78,7 +78,7 @@ impl IpfsOps {
         let yaml = serde_yaml::to_string(skill)
             .map_err(|e| Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
 
-        let cid = self.client.add(yaml.as_bytes(), ContentType::Skill).await?;
+        let cid = self.client.add(yaml.as_bytes()).await?;
 
         Ok(ContentAddress {
             cid,
@@ -193,6 +193,8 @@ impl Serialize for ContentType {
             ContentType::SessionState => "session_state",
             ContentType::Skill => "skill",
             ContentType::AuditLog => "audit_log",
+            ContentType::AlexandriaDelta => "alexandria_delta",
+            ContentType::AlexandriaWormhole => "alexandria_wormhole",
         };
         serializer.serialize_str(s)
     }
@@ -211,6 +213,8 @@ impl<'de> Deserialize<'de> for ContentType {
             "session_state" => Ok(ContentType::SessionState),
             "skill" => Ok(ContentType::Skill),
             "audit_log" => Ok(ContentType::AuditLog),
+            "alexandria_delta" => Ok(ContentType::AlexandriaDelta),
+            "alexandria_wormhole" => Ok(ContentType::AlexandriaWormhole),
             _ => Err(serde::de::Error::custom(format!("unknown content type: {}", s))),
         }
     }

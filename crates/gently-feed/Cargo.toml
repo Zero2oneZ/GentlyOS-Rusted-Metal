@@ -11,6 +11,10 @@ description = "Living Feed - Self-tracking context system with charge/decay mech
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Crypto (for XOR chain)
+sha2 = { workspace = true }
+rand = { workspace = true }
+
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 

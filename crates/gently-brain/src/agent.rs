@@ -216,10 +216,17 @@ impl AgentRuntime {
 
     /// Merge two agents into new generation
     pub fn merge(&mut self, agent_a: &Hash, agent_b: &Hash, name: &str) -> Option<Hash> {
-        let a = self.agents.get(agent_a)?;
-        let b = self.agents.get(agent_b)?;
+        // Clone required data first to avoid borrow conflicts
+        let (a_meta, a_wasm, a_lora) = {
+            let a = self.agents.get(agent_a)?;
+            (a.meta.clone(), a.wasm.clone(), a.lora_chain)
+        };
+        let (b_meta, b_wasm, b_lora) = {
+            let b = self.agents.get(agent_b)?;
+            (b.meta.clone(), b.wasm.clone(), b.lora_chain)
+        };
 
-        let generation = a.meta.generation.max(b.meta.generation) + 1;
+        let generation = a_meta.generation.max(b_meta.generation) + 1;
 
         let meta = AgentMeta {
             name: name.to_string(),
@@ -228,15 +235,15 @@ impl AgentRuntime {
             parent: Some(format!("{}+{}",
                 &hex::encode(agent_a)[..8],
                 &hex::encode(agent_b)[..8])),
-            traits: merge_traits(&a.meta.traits, &b.meta.traits),
+            traits: merge_traits(&a_meta.traits, &b_meta.traits),
         };
 
         // Merge WASMs (placeholder - real impl would combine)
-        let merged_wasm = self.merge_wasm(&a.wasm, &b.wasm);
+        let merged_wasm = self.merge_wasm(&a_wasm, &b_wasm);
         let wasm_hash = self.store.put(Blob::new(Kind::Wasm, merged_wasm.clone()));
 
         // Merge LoRA chains
-        let merged_lora = self.merge_lora(&a.lora_chain, &b.lora_chain);
+        let merged_lora = self.merge_lora(&a_lora, &b_lora);
 
         let svg = self.generate_svg(&meta, &wasm_hash, &merged_lora);
         let svg_bytes = svg.as_bytes().to_vec();
@@ -363,7 +370,7 @@ impl AgentRuntime {
         let lora_hex = hex::encode(lora_hash);
         let color = self.hash_to_color(wasm_hash);
 
-        format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+        format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
   <!-- VISUAL: What I am -->
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -406,7 +413,7 @@ impl AgentRuntime {
       <parent>{}</parent>
     </agent>
   </metadata>
-</svg>"#,
+</svg>"##,
             color,
             meta.name,
             meta.generation,
@@ -530,6 +537,7 @@ mod tests {
 
         assert_eq!(charlie.meta.name, "charlie");
         assert_eq!(charlie.meta.generation, 1);
-        assert!(charlie.meta.parent.unwrap().contains("+"));
+        let parent = charlie.meta.parent.clone().unwrap();
+        assert!(parent.contains('+'));
     }
 }

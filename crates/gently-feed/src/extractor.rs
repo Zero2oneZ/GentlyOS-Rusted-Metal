@@ -51,6 +51,7 @@ impl Sentiment {
 }
 
 /// Context extractor with configurable patterns
+#[derive(Debug, Clone)]
 pub struct ContextExtractor {
     /// Known item names (for mention detection)
     known_items: HashSet<String>,

@@ -250,7 +250,8 @@ impl Thought {
             1.0 / (1.0 + age_hours / 24.0) // Decay over days
         };
 
-        let popularity = (self.access_count as f32).ln() / 10.0;
+        // Use ln(1 + count) to avoid -inf when count is 0
+        let popularity = (1.0 + self.access_count as f32).ln() / 10.0;
 
         recency * 0.7 + popularity * 0.3
     }

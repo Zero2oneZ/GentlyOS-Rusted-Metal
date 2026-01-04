@@ -66,8 +66,8 @@ impl TrustSystem {
 
     /// Check if entity is allowed to perform action
     pub fn is_allowed(&mut self, entity_id: &str, action: &TrustAction) -> bool {
-        let state = self.get_state(entity_id);
         let required_level = self.config.required_level_for(action);
+        let state = self.get_state(entity_id);
         state.level >= required_level
     }
 

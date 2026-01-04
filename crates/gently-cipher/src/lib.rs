@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! Cipher-Mesh: GentlyOS Cryptanalysis Toolkit
 //!
 //! Cipher identification, encoding/decoding, frequency analysis.

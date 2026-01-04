@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! # Gently Feed
 //!
 //! Self-tracking context system with charge/decay mechanics.
@@ -39,7 +41,7 @@ pub mod xor_chain;
 pub use bridge::{Bridge, BridgeKind};
 pub use extractor::{ContextExtractor, ExtractedContext};
 pub use feed::LivingFeed;
-pub use item::{FeedItem, ItemState, Step};
+pub use item::{FeedItem, ItemKind, ItemState, Step};
 pub use persistence::FeedStorage;
 pub use xor_chain::XorChain;
 

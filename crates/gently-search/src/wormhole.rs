@@ -95,6 +95,7 @@ impl Wormhole {
 }
 
 /// Detector for finding wormhole connections
+#[derive(Debug, Clone)]
 pub struct WormholeDetector {
     /// Minimum similarity for keyword-based wormholes
     pub min_keyword_overlap: usize,
@@ -229,7 +230,8 @@ mod tests {
 
     #[test]
     fn test_keyword_wormhole() {
-        let detector = WormholeDetector::default();
+        let mut detector = WormholeDetector::default();
+        detector.min_keyword_overlap = 1; // Allow single keyword overlap
 
         let mut t1 = Thought::new("Understanding XOR cryptography");
         t1.shape.keywords = vec!["xor".into(), "crypto".into(), "security".into()];

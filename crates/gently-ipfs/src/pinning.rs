@@ -142,6 +142,8 @@ impl PinningManager {
             ContentType::SessionState => "session_state",
             ContentType::Skill => "skill",
             ContentType::AuditLog => "audit_log",
+            ContentType::AlexandriaDelta => "alexandria_delta",
+            ContentType::AlexandriaWormhole => "alexandria_wormhole",
         };
 
         self.strategies.get(key).unwrap_or(&self.default_strategy)

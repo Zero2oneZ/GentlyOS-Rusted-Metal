@@ -144,6 +144,7 @@ impl Bridge {
 }
 
 /// Bridge detector for finding connections
+#[derive(Debug, Clone)]
 pub struct BridgeDetector {
     /// Minimum co-occurrences to create bridge
     pub min_cooccurrences: u32,

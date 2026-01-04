@@ -91,18 +91,27 @@ impl RecallEngine {
         let mut spoken = Vec::new();
         let mut crystallized = Vec::new();
 
-        for (crystal, _) in scored.iter().take(20) {
+        // Collect IDs and states first to avoid borrow conflict
+        let top_results: Vec<(uuid::Uuid, IdeaState)> = scored.iter()
+            .take(20)
+            .map(|(crystal, _)| (crystal.id, crystal.state))
+            .collect();
+
+        // Now we can drop the borrow from scored and mutate
+        drop(scored);
+
+        for (id, state) in &top_results {
             // Mark as used
-            if let Some(c) = self.crystals.get_mut(&crystal.id) {
+            if let Some(c) = self.crystals.get_mut(id) {
                 c.used();
             }
 
-            match crystal.state {
-                IdeaState::Confirmed => confirmed.push(crystal.id),
-                IdeaState::Spoken | IdeaState::Embedded => spoken.push(crystal.id),
-                IdeaState::Crystallized => crystallized.push(crystal.id),
-                IdeaState::Unused => spoken.push(crystal.id),
-                IdeaState::Modified => confirmed.push(crystal.id),
+            match state {
+                IdeaState::Confirmed => confirmed.push(*id),
+                IdeaState::Spoken | IdeaState::Embedded => spoken.push(*id),
+                IdeaState::Crystallized => crystallized.push(*id),
+                IdeaState::Unused => spoken.push(*id),
+                IdeaState::Modified => confirmed.push(*id),
             }
         }
 

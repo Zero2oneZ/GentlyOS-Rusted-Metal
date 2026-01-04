@@ -378,10 +378,11 @@ impl GentlyAssistant {
             }
             Err(ureq::Error::Status(code, resp)) => {
                 let body: serde_json::Value = resp.into_json().unwrap_or(serde_json::json!({}));
+                let default_msg = format!("HTTP {}", code);
                 let msg = body.get("error")
                     .and_then(|e| e.get("message"))
                     .and_then(|m| m.as_str())
-                    .unwrap_or(&format!("HTTP {}", code));
+                    .unwrap_or(&default_msg);
                 Err(Error::InferenceFailed(msg.to_string()))
             }
             Err(e) => {
@@ -455,10 +456,11 @@ impl GentlyAssistant {
             }
             Err(ureq::Error::Status(code, resp)) => {
                 let body: serde_json::Value = resp.into_json().unwrap_or(serde_json::json!({}));
+                let default_msg = format!("HTTP {}", code);
                 let msg = body.get("error")
                     .and_then(|e| e.get("message"))
                     .and_then(|m| m.as_str())
-                    .unwrap_or(&format!("HTTP {}", code));
+                    .unwrap_or(&default_msg);
                 Err(Error::InferenceFailed(msg.to_string()))
             }
             Err(e) => {

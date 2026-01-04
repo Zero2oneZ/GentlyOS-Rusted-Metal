@@ -195,7 +195,7 @@ impl ArchitectSecurity {
 
             // Connector to timeline
             svg.push_str(&format!(
-                r#"<circle cx="100" cy="{}" r="5" fill="#00ffff"/>"#,
+                r##"<circle cx="100" cy="{}" r="5" fill="#00ffff"/>"##,
                 y + 15
             ));
         }

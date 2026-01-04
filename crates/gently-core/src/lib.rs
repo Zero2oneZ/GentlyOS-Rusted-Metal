@@ -19,7 +19,7 @@ pub mod crypto;
 pub mod pattern;
 pub mod vault;
 
-pub use blob::{Hash, Tag, Kind, Blob, Ref, Manifest, Index, BlobStore};
+pub use blob::{Hash, Tag, Kind, Blob, Ref, Manifest, Index, BlobStore, hex_hash};
 pub use blob::{TAG_ENTRY, TAG_PARENT, TAG_CHILD, TAG_SCHEMA, TAG_NEXT, TAG_PREV};
 pub use blob::{TAG_WEIGHTS, TAG_CODE, TAG_CONFIG, TAG_GENESIS, TAG_LOCK, TAG_KEY};
 pub use blob::{TAG_VISUAL, TAG_AUDIO, TAG_VECTOR};

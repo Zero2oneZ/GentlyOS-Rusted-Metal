@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION="1.1.1"
+VERSION="1.0.0"
 GITHUB_REPO="gentlyos/gentlyos"
 INSTALL_DIR="/usr/local/bin"
 
@@ -202,6 +202,78 @@ EOF
     fi
 }
 
+# Install Rust toolchain (for source builds)
+install_rust() {
+    if command -v rustc &>/dev/null; then
+        log "Rust already installed: $(rustc --version)"
+        return 0
+    fi
+
+    log "Installing Rust toolchain..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+    success "Rust installed: $(rustc --version)"
+}
+
+# Build from source (fallback)
+build_from_source() {
+    log "Building from source..."
+
+    install_rust
+
+    # Clone repository
+    TEMP_DIR=$(mktemp -d)
+    git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "$TEMP_DIR/gentlyos"
+    cd "$TEMP_DIR/gentlyos"
+
+    # Build release
+    cargo build --release -p gently-cli
+
+    # Install binary
+    if [ "$OS" = "android" ]; then
+        cp target/release/gently "$PREFIX/bin/gently"
+    else
+        cp target/release/gently "${INSTALL_DIR}/gently"
+    fi
+
+    # Cleanup
+    cd -
+    rm -rf "$TEMP_DIR"
+
+    success "Built and installed from source"
+}
+
+# Setup user data directory
+setup_user_data() {
+    log "Setting up user data directory..."
+
+    USER_DATA_DIR="$HOME/.gently"
+    mkdir -p "$USER_DATA_DIR"/{alexandria,brain,feed,models,vault}
+
+    # Create default user config
+    if [ ! -f "$USER_DATA_DIR/config.toml" ]; then
+        cat > "$USER_DATA_DIR/config.toml" << EOF
+# GentlyOS User Configuration
+# Version: ${VERSION}
+
+[user]
+# data_dir = "${USER_DATA_DIR}"
+
+[embeddings]
+# model = "BAAI/bge-small-en-v1.5"
+# cache_dir = "${USER_DATA_DIR}/models"
+
+[alexandria]
+# graph_path = "${USER_DATA_DIR}/alexandria/graph.json"
+
+[brain]
+# knowledge_db = "${USER_DATA_DIR}/brain/knowledge.db"
+EOF
+    fi
+
+    success "User data directory created at ${USER_DATA_DIR}"
+}
+
 # Verify installation
 verify_install() {
     log "Verifying installation..."
@@ -211,6 +283,25 @@ verify_install() {
         success "GentlyOS installed: ${INSTALLED_VERSION}"
     else
         error "Installation verification failed"
+    fi
+}
+
+# Run initial setup wizard
+run_setup_wizard() {
+    log "Running initial setup..."
+
+    # Check if already initialized
+    if [ -f "$HOME/.gently/vault/genesis.key" ]; then
+        log "Already initialized. Skipping setup wizard."
+        return 0
+    fi
+
+    # Run gently init if available
+    if command -v gently &>/dev/null; then
+        log "Running 'gently init' to generate genesis keys..."
+        gently init --non-interactive 2>/dev/null || {
+            warn "Interactive init required. Run 'gently init' manually."
+        }
     fi
 }
 
@@ -242,13 +333,48 @@ print_completion() {
 
 # Main
 main() {
+    # Parse arguments
+    FROM_SOURCE=false
+    SKIP_SETUP=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --source)
+                FROM_SOURCE=true
+                shift
+                ;;
+            --skip-setup)
+                SKIP_SETUP=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
     detect_os
     check_root
     install_deps
-    install_binary
+
+    if [ "$FROM_SOURCE" = true ]; then
+        build_from_source
+    else
+        install_binary || {
+            warn "Binary download failed. Building from source..."
+            build_from_source
+        }
+    fi
+
     setup_config
+    setup_user_data
     setup_service
     verify_install
+
+    if [ "$SKIP_SETUP" = false ]; then
+        run_setup_wizard
+    fi
+
     print_completion
 }
 

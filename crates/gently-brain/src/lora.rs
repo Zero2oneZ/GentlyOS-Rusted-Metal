@@ -109,17 +109,8 @@ impl LoraChain {
 
     /// Walk chain from tip to base
     pub fn chain(&self) -> Vec<Hash> {
-        let mut result = Vec::new();
-        let mut current = self.adapters.last().copied();
-
-        while let Some(hash) = current {
-            result.push(hash);
-            current = self.store.get(&hash)
-                .and_then(|b| Manifest::from_blob(b))
-                .and_then(|m| m.get(TAG_PARENT));
-        }
-
-        result
+        // Return adapters in reverse order (tip to base)
+        self.adapters.iter().rev().copied().collect()
     }
 
     /// Fuse chain into single weight tensor

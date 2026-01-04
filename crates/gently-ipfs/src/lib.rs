@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! GentlyOS IPFS Operations
 //!
 //! They spend, we gather.
@@ -8,11 +10,13 @@ pub mod operations;
 pub mod pinning;
 pub mod mcp;
 pub mod vault;
+pub mod alexandria_sync;
 
 pub use client::IpfsClient;
 pub use operations::{IpfsOps, ContentAddress};
 pub use pinning::PinningStrategy;
 pub use vault::{IpfsVault, VaultPointer};
+pub use alexandria_sync::{AlexandriaSync, DeltaMessage, DeltaType, SyncStats};
 
 use thiserror::Error;
 
@@ -60,4 +64,8 @@ pub enum ContentType {
     Skill,
     /// Audit log chunk
     AuditLog,
+    /// Alexandria graph delta
+    AlexandriaDelta,
+    /// Alexandria wormhole discovery
+    AlexandriaWormhole,
 }

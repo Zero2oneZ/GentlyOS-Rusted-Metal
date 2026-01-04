@@ -181,7 +181,7 @@ impl ThoughtIndex {
 
         for existing in &self.thoughts {
             let detected = self.wormhole_detector.detect_all(new_thought, existing);
-            for mut wormhole in detected {
+            for wormhole in detected {
                 // Avoid duplicate wormholes
                 let exists = self.wormholes.iter().any(|w| {
                     w.connects(wormhole.from_id)

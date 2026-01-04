@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! GentlyOS Exploitation Framework
 //!
 //! Metasploit-style security testing toolkit.
@@ -93,6 +95,7 @@ pub enum Protocol {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(non_camel_case_types)]  // iOS is the correct name
 pub enum OperatingSystem {
     Linux,
     Windows,
@@ -347,5 +350,57 @@ impl Framework {
             },
             options: GlobalOptions::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_framework_new() {
+        let framework = Framework::new();
+        assert_eq!(framework.workspace.name, "default");
+        assert!(framework.workspace.hosts.is_empty());
+    }
+
+    #[test]
+    fn test_module_registry_new() {
+        let registry = ModuleRegistry::new();
+        assert!(registry.search("nothing").is_empty());
+    }
+
+    #[test]
+    fn test_module_registry_load_builtin() {
+        let mut registry = ModuleRegistry::new();
+        registry.load_builtin();
+        // Should have at least the built-in modules
+        let results = registry.search("apache");
+        assert!(!results.is_empty());
+    }
+
+    #[test]
+    fn test_target_new() {
+        let target = Target::new("192.168.1.1", 80);
+        assert_eq!(target.host, "192.168.1.1");
+        assert_eq!(target.port, 80);
+    }
+
+    #[test]
+    fn test_operating_system_enum() {
+        assert_ne!(OperatingSystem::Linux, OperatingSystem::Windows);
+        assert_eq!(OperatingSystem::Unknown, OperatingSystem::Unknown);
+    }
+
+    #[test]
+    fn test_architecture_enum() {
+        assert_ne!(Architecture::X86, Architecture::X64);
+        assert_eq!(Architecture::ARM64, Architecture::ARM64);
+    }
+
+    #[test]
+    fn test_module_rank_ordering() {
+        assert!(ModuleRank::Excellent as u32 > ModuleRank::Good as u32);
+        assert!(ModuleRank::Good as u32 > ModuleRank::Normal as u32);
     }
 }

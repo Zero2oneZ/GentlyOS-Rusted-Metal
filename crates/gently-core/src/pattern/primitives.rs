@@ -303,6 +303,11 @@ impl Frequency {
         Self(hz)
     }
 
+    /// Create from Hz value
+    pub fn from_hz(hz: f32) -> Self {
+        Self(hz as u16)
+    }
+
     pub fn hz(&self) -> f32 {
         self.0 as f32
     }
@@ -311,6 +316,7 @@ impl Frequency {
 /// Chord types
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChordType {
+    None,
     Major,
     Minor,
     Diminished,
@@ -335,6 +341,7 @@ impl ChordType {
     /// Get the intervals (in semitones) for this chord
     pub fn intervals(&self) -> &'static [i32] {
         match self {
+            Self::None => &[],
             Self::Major => &[0, 4, 7],
             Self::Minor => &[0, 3, 7],
             Self::Diminished => &[0, 3, 6],
@@ -348,6 +355,7 @@ impl ChordType {
 /// Rhythm patterns
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RhythmPattern {
+    Whole,       // X . . . . . . .
     Quarter,     // X . X . X . X .
     Eighth,      // X X X X X X X X
     Dotted,      // X . . X . . X .
@@ -376,6 +384,7 @@ impl RhythmPattern {
     /// Get beat pattern (true = play, false = rest)
     pub fn pattern(&self) -> &'static [bool] {
         match self {
+            Self::Whole => &[true, false, false, false, false, false, false, false],
             Self::Quarter => &[true, false, true, false, true, false, true, false],
             Self::Eighth => &[true; 8],
             Self::Dotted => &[true, false, false, true, false, false, true, false],

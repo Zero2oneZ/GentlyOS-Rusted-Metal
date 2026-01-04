@@ -11,6 +11,9 @@ description = "Thought Index - User-unique, context-routed search system"
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Crypto (for thought hashing)
+sha2 = { workspace = true }
+
 # Time
 chrono = { workspace = true }
 
@@ -26,6 +29,7 @@ thiserror = { workspace = true }
 # Internal crates
 gently-core = { workspace = true }
 gently-feed = { workspace = true }
+gently-alexandria = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3.10"

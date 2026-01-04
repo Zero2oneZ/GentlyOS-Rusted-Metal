@@ -158,10 +158,11 @@ impl PacketCapture {
 
     /// Capture to file (pcapng)
     pub fn capture_to_file(&self, output: &str, duration_secs: u64) -> Result<String> {
+        let duration_arg = format!("duration:{}", duration_secs);
         let mut args = vec![
             "-i", &self.interface,
             "-w", output,
-            "-a", &format!("duration:{}", duration_secs),
+            "-a", &duration_arg,
         ];
 
         if self.promiscuous {

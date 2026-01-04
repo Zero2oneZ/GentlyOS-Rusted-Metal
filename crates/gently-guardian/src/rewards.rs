@@ -350,7 +350,10 @@ mod tests {
             embeddings_created: 5,
             storage_served_mb: 2,
             merkle_root: [0u8; 32],
-            signature: [0u8; 64],
+            signature: [0u8; 64].to_vec(),
+            alexandria_edges_served: 50,
+            alexandria_deltas_synced: 10,
+            alexandria_wormholes_found: 2,
         };
 
         let reward = tracker.calculate_reward(&proof);

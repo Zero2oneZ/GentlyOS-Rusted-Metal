@@ -66,6 +66,8 @@ impl TokenDistiller {
             }
         }
 
+        let action_taken = if tokens.is_empty() { None } else { Some(self.action) };
+
         if !tokens.is_empty() {
             self.stats.distill_operations += 1;
         }
@@ -74,7 +76,7 @@ impl TokenDistiller {
             original: text.to_string(),
             masked: masked_text,
             tokens,
-            action_taken: if tokens.is_empty() { None } else { Some(self.action) },
+            action_taken,
         }
     }
 
@@ -131,7 +133,7 @@ impl TokenDistiller {
             },
             TokenPattern {
                 name: "Generic API Key".to_string(),
-                regex: r"(?i)(api[_-]?key|apikey)['\"]?\s*[:=]\s*['\"]?([a-zA-Z0-9\-_]{20,})['\"]?".to_string(),
+                regex: r#"(?i)(api[_-]?key|apikey)['"]?\s*[:=]\s*['"]?([a-zA-Z0-9\-_]{20,})['"]?"#.to_string(),
                 token_type: TokenType::ApiKey,
                 risk_level: RiskLevel::High,
             },
@@ -158,7 +160,7 @@ impl TokenDistiller {
             },
             TokenPattern {
                 name: "AWS Secret Key".to_string(),
-                regex: r"(?i)aws[_-]?secret[_-]?access[_-]?key['\"]?\s*[:=]\s*['\"]?([a-zA-Z0-9/\+=]{40})['\"]?".to_string(),
+                regex: r#"(?i)aws[_-]?secret[_-]?access[_-]?key['"]?\s*[:=]\s*['"]?([a-zA-Z0-9/\+=]{40})['"]?"#.to_string(),
                 token_type: TokenType::AwsKey,
                 risk_level: RiskLevel::Critical,
             },
@@ -191,7 +193,7 @@ impl TokenDistiller {
             },
             TokenPattern {
                 name: "Password Assignment".to_string(),
-                regex: r"(?i)(password|passwd|pwd)['\"]?\s*[:=]\s*['\"]?([^\s'\"]{8,})['\"]?".to_string(),
+                regex: r#"(?i)(password|passwd|pwd)['"]?\s*[:=]\s*['"]?([^\s'"]{8,})['"]?"#.to_string(),
                 token_type: TokenType::Password,
                 risk_level: RiskLevel::High,
             },
@@ -205,7 +207,7 @@ impl TokenDistiller {
             // Crypto Seeds/Mnemonics
             TokenPattern {
                 name: "Crypto Mnemonic".to_string(),
-                regex: r"(?i)(seed|mnemonic)['\"]?\s*[:=]\s*['\"]?(\w+(?:\s+\w+){11,23})['\"]?".to_string(),
+                regex: r#"(?i)(seed|mnemonic)['"]?\s*[:=]\s*['"]?(\w+(?:\s+\w+){11,23})['"]?"#.to_string(),
                 token_type: TokenType::CryptoSeed,
                 risk_level: RiskLevel::Critical,
             },

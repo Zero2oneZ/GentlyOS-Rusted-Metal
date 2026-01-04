@@ -122,8 +122,8 @@ impl IpfsVault {
 
     /// Export all keys to environment
     pub fn export_all_to_env(&mut self) {
-        for service in self.vault.list() {
-            let service = service.to_string();
+        let services: Vec<String> = self.vault.list().iter().map(|s| s.to_string()).collect();
+        for service in services {
             self.get_and_export(&service);
         }
     }

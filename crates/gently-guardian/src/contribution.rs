@@ -59,6 +59,24 @@ pub enum WorkItem {
         work_hash: [u8; 32],
         claimed_result: Vec<u8>,
     },
+    /// Alexandria: Serve graph edges
+    AlexandriaEdgeQuery {
+        id: String,
+        concept: String,
+        requester: String,
+    },
+    /// Alexandria: Sync graph deltas
+    AlexandriaSyncDelta {
+        id: String,
+        from_node: String,
+        delta_data: Vec<u8>,
+    },
+    /// Alexandria: Discover wormholes
+    AlexandriaWormhole {
+        id: String,
+        from_concept: String,
+        to_concept: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +101,9 @@ pub enum WorkType {
     Embedding,
     Storage,
     Validation,
+    AlexandriaEdge,
+    AlexandriaSync,
+    AlexandriaWormhole,
 }
 
 /// Contribution proof for on-chain submission
@@ -96,6 +117,10 @@ pub struct ContributionProof {
     pub storage_served_mb: u32,
     pub merkle_root: [u8; 32],
     pub signature: Vec<u8>,
+    // Alexandria contribution metrics
+    pub alexandria_edges_served: u32,
+    pub alexandria_deltas_synced: u32,
+    pub alexandria_wormholes_found: u32,
 }
 
 impl ContributionManager {
@@ -122,6 +147,9 @@ impl ContributionManager {
         let mut inference_time_total = 0u64;
         let mut embeddings_count = 0u32;
         let mut storage_mb = 0u32;
+        let mut alexandria_edges = 0u32;
+        let mut alexandria_syncs = 0u32;
+        let mut alexandria_wormholes = 0u32;
 
         for item in work_items {
             match self.process_item(item).await {
@@ -137,6 +165,15 @@ impl ContributionManager {
                             storage_mb += 1; // Simplified
                         }
                         WorkType::Validation => {}
+                        WorkType::AlexandriaEdge => {
+                            alexandria_edges += 1;
+                        }
+                        WorkType::AlexandriaSync => {
+                            alexandria_syncs += 1;
+                        }
+                        WorkType::AlexandriaWormhole => {
+                            alexandria_wormholes += 1;
+                        }
                     }
 
                     let mut completed = self.completed.write().unwrap();
@@ -175,6 +212,9 @@ impl ContributionManager {
             storage_served_mb: storage_mb,
             merkle_root,
             signature: vec![0u8; 64], // Filled by reward tracker
+            alexandria_edges_served: alexandria_edges,
+            alexandria_deltas_synced: alexandria_syncs,
+            alexandria_wormholes_found: alexandria_wormholes,
         })
     }
 
@@ -201,6 +241,21 @@ impl ContributionManager {
                 let valid = self.validate_work(&work_hash, &claimed_result).await?;
                 let hash = sha256(&[valid as u8]);
                 (id, WorkType::Validation, hash)
+            }
+            WorkItem::AlexandriaEdgeQuery { id, concept, .. } => {
+                let edges = self.serve_alexandria_edges(&concept).await?;
+                let hash = sha256(&edges);
+                (id, WorkType::AlexandriaEdge, hash)
+            }
+            WorkItem::AlexandriaSyncDelta { id, delta_data, .. } => {
+                self.process_alexandria_delta(&delta_data).await?;
+                let hash = sha256(&delta_data);
+                (id, WorkType::AlexandriaSync, hash)
+            }
+            WorkItem::AlexandriaWormhole { id, from_concept, to_concept } => {
+                let wormhole = self.discover_alexandria_wormhole(&from_concept, &to_concept).await?;
+                let hash = sha256(&wormhole);
+                (id, WorkType::AlexandriaWormhole, hash)
             }
         };
 
@@ -240,6 +295,38 @@ impl ContributionManager {
 
         let computed_hash = sha256(claimed);
         Ok(&computed_hash == work_hash)
+    }
+
+    /// Serve Alexandria graph edges for a concept
+    async fn serve_alexandria_edges(&self, concept: &str) -> anyhow::Result<Vec<u8>> {
+        // In real implementation, query local Alexandria graph
+        // and return serialized edges
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Return mock edges response
+        Ok(format!("edges:{}", concept).into_bytes())
+    }
+
+    /// Process and merge an Alexandria delta from another node
+    async fn process_alexandria_delta(&self, delta_data: &[u8]) -> anyhow::Result<()> {
+        // In real implementation:
+        // 1. Deserialize delta
+        // 2. Validate delta (merkle proof)
+        // 3. Merge into local graph
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        Ok(())
+    }
+
+    /// Discover a wormhole (short path) between two concepts
+    async fn discover_alexandria_wormhole(&self, from: &str, to: &str) -> anyhow::Result<Vec<u8>> {
+        // In real implementation:
+        // 1. BFS search from concept A
+        // 2. If path to B found in <= 3 hops, that's a wormhole
+        // 3. Return the path
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        // Return mock wormhole path
+        Ok(format!("wormhole:{}->{}:3", from, to).into_bytes())
     }
 
     fn compute_merkle_root(&self, tasks: &[CompletedTask]) -> [u8; 32] {

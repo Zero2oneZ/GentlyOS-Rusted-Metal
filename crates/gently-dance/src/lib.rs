@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! # GentlyOS Dance Protocol
 //!
 //! Two-device visual-audio call-and-response handshake.

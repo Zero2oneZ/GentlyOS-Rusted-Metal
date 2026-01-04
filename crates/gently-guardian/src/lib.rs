@@ -1,4 +1,5 @@
 //! GentlyOS Guardian Module
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]  // Some features disabled pending Solana integration
 //!
 //! Free tier participation:
 //! - Hardware detection and benchmarking

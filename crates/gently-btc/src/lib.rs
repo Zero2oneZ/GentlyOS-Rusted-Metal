@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 //! # GentlyOS BTC Block Monitor
 //!
 //! Watches Bitcoin blockchain for:

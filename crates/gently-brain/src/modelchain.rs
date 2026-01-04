@@ -57,7 +57,7 @@ pub struct Model {
     pub meta: ModelMeta,
     pub wasm: Hash,
     pub weights: Option<Hash>,
-    pub next: Option<Hash>,
+    pub prev: Option<Hash>,
 }
 
 /// Chain of models for inference pipeline
@@ -113,6 +113,11 @@ impl ModelChain {
             svg_manifest.add(TAG_WEIGHTS, wh);
         }
 
+        // Link to previous head
+        if let Some(prev) = self.head {
+            svg_manifest.add(TAG_PREV, prev);
+        }
+
         let model_hash = self.store.put(svg_manifest.to_blob());
 
         // Update chain links
@@ -141,9 +146,9 @@ impl ModelChain {
 
         let wasm = manifest.get(TAG_CODE)?;
         let weights = manifest.get(TAG_WEIGHTS);
-        let next = manifest.get(TAG_NEXT);
+        let prev = manifest.get(TAG_PREV);
 
-        Some(Model { hash: *hash, meta, wasm, weights, next })
+        Some(Model { hash: *hash, meta, wasm, weights, prev })
     }
 
     /// Iterate chain from hash
@@ -189,12 +194,12 @@ impl ModelChain {
 
     /// Generate SVG visualization
     fn generate_svg(&self, meta: &ModelMeta) -> String {
-        format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+        format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
   <rect x="10" y="10" width="180" height="80" fill="#1a1a2e" rx="8"/>
   <text x="100" y="35" text-anchor="middle" fill="#eee" font-size="12">{}</text>
   <text x="100" y="55" text-anchor="middle" fill="#888" font-size="10">v{}</text>
   <text x="100" y="75" text-anchor="middle" fill="#4a9" font-size="9">{:?} → {:?}</text>
-</svg>"#,
+</svg>"##,
             meta.name,
             meta.version,
             meta.input.shape,
@@ -219,7 +224,7 @@ impl<'a> Iterator for ChainIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let hash = self.current?;
         let model = self.chain.get(&hash)?;
-        self.current = model.next;
+        self.current = model.prev;
         Some(model)
     }
 }

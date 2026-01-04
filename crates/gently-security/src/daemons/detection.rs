@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::time::{Duration, Instant};
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::mpsc;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Timelike};
 
 /// Prompt Analyzer Daemon
 /// Detects prompt injection and jailbreak attempts

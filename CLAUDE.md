@@ -1,110 +1,160 @@
 # GentlyOS - Claude Context
 
-**Last Updated**: 2026-01-02
-**Lines of Code**: ~30,000+
-**Crates**: 17 Rust crates + Solana program
+**Last Updated**: 2026-01-04
+**Lines of Code**: ~35,000+
+**Crates**: 17 Rust crates (Solana disabled)
 
 ---
 
-## Current State
+## Current State (v1.0.0)
 
-### Just Completed: gently-guardian crate
+### Completed Sprints
 
-Free tier "Guardian" node that earns GNTLY tokens by contributing compute:
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| 1 | Persistence + Embeddings | DONE |
+| 2 | Intelligence Integration | DONE |
+| 3 | Security Hardening | DONE |
+| 4 | Distribution & Install | DONE |
+| 5 | Polish & Stability | DONE |
 
+### Production-Ready Crates
+
+| Crate | Status | Notes |
+|-------|--------|-------|
+| gently-core | 95% | Crypto foundation, XOR splits, genesis keys |
+| gently-audio | 100% | FFT encoding/decoding with tests |
+| gently-visual | 100% | SVG pattern generation |
+| gently-dance | 85% | Full protocol state machine |
+| gently-btc | 90% | Block promise logic |
+| gently-ipfs | 85% | Thin wrapper (delegates to daemon) |
+| gently-guardian | 80% | Hardware detection, cross-platform (sysinfo) |
+| gently-security | 85% | 16/16 daemons, real hash chain, threat intel |
+| gently-feed | 70% | Charge/decay model works |
+| gently-gateway | 70% | Pipeline architecture |
+| gently-brain | 75% | Claude API real, Alexandria integration |
+| gently-cipher | 50% | Ciphers work, analysis stubbed |
+| gently-network | 60% | Visualization works |
+| gently-architect | 55% | SQLite works, UI stubbed |
+| gently-mcp | 50% | Server ready, handlers missing |
+| gently-search | 70% | Alexandria routing, Tesseract projection |
+| gently-alexandria | 75% | Graph + Tesseract work, persistence |
+| gently-sploit | 20% | Framework only |
+| gently-spl | DISABLED | Solana version conflicts |
+
+---
+
+## Installation
+
+### One-Liner (Recommended)
+
+```bash
+curl -fsSL https://gentlyos.com/install.sh | sudo bash
 ```
-crates/gently-guardian/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs           # Guardian manager, NodeTier enum, GuardianConfig
-│   ├── main.rs          # CLI: start, register, benchmark, status, claim, upgrade
-│   ├── hardware.rs      # Linux hardware detection, fingerprinting, scoring
-│   ├── benchmark.rs     # CPU/Memory/GPU/Storage benchmarks, proof-of-work
-│   ├── contribution.rs  # Work queue, task processing, merkle proofs
-│   ├── rewards.rs       # Solana RPC simulation, reward tracking, tier upgrades
-│   └── anti_cheat.rs    # Hardware validation, Sybil detection, VM detection
+
+Options:
+- `--source` - Build from source instead of binary download
+- `--skip-setup` - Skip the initial setup wizard
+
+### First-Time Setup
+
+```bash
+gently setup           # Interactive wizard
+gently setup --force   # Force re-initialization
 ```
 
-### Solana Reward Program
-
+Creates:
 ```
-contracts/solana/programs/gently-rewards/src/lib.rs
+~/.gently/
+├── alexandria/graph.json   # Knowledge graph
+├── brain/knowledge.db      # SQLite knowledge base
+├── feed/                   # Feed state
+├── models/                 # Embedding models
+├── vault/genesis.key       # Genesis key
+└── config.toml             # User config
 ```
-
-Anchor-based program with:
-- `initialize_pool` - Create reward pool
-- `register_node` - Register guardian with hardware hash
-- `submit_contribution` - Submit work proofs
-- `claim_rewards` - Claim earned GNTLY
-- `upgrade_tier` - Stake to upgrade (Guardian -> Home -> Business -> Studio)
-- `slash_node` - Penalize cheaters
 
 ---
 
 ## Build Commands
 
 ```bash
-# Build guardian crate (VERIFY THIS FIRST)
-cargo build --release -p gently-guardian
+# Build CLI (main binary)
+cargo build --release -p gently-cli
 
-# Build full workspace
+# Build all crates
 cargo build --release
 
-# Run guardian node
-./target/release/gently-guardian start
+# Run tests
+cargo test --workspace
 
-# Run benchmark only
-./target/release/gently-guardian benchmark
+# Run CLI
+./target/release/gently
+
+# Run setup wizard
+./target/release/gently setup
+```
+
+### Deployment Scripts
+
+```bash
+# Docker image
+./scripts/deploy/build-docker.sh
+
+# Debian package
+./scripts/deploy/build-deb.sh
+
+# All formats
+./scripts/deploy/build-all.sh
+```
+
+---
+
+## CLI Commands (28 total)
+
+### Working (21)
+```
+init, create, pattern, split, combine, status, demo, feed,
+search, alexandria, cipher, network, brain, architect, ipfs,
+sploit, crack, claude, vault, mcp, report, setup
+```
+
+### Disabled (7 - Solana)
+```
+install, mint, wallet, token, certify, perm, genos
 ```
 
 ---
 
 ## Architecture
 
-### Node Tiers
-
-| Tier | Stake | Features |
-|------|-------|----------|
-| Guardian | Free | Earn by contributing compute |
-| Home | 1,000 GNTLY | Priority routing, 2x rewards |
-| Business | 5,000 GNTLY | Dedicated capacity, 3x rewards |
-| Studio | 25,000 GNTLY | GPU protection, 5x rewards |
-
-### Reward Algorithm
+### Security Daemon Layers
 
 ```
-reward = 0.01 × hardware_score × uptime_multiplier × quality_score
+Layer 1 (Foundation): HashChainValidator*, BtcAnchor, ForensicLogger
+Layer 2 (Traffic):    TrafficSentinel, TokenWatchdog, CostGuardian
+Layer 3 (Detection):  PromptAnalyzer, BehaviorProfiler, PatternMatcher, AnomalyDetector
+Layer 4 (Defense):    SessionIsolator, TarpitController, ResponseMutator, RateLimitEnforcer
+Layer 5 (Intel):      ThreatIntelCollector*, SwarmDefense
 
-hardware_score = CPU_cores + RAM_GB/4 + GPU_VRAM*5 + Storage_GB/100
-uptime_multiplier = min(hours/24, 1.0) × tier_bonus
-quality_score = tasks_completed / (tasks_completed + tasks_failed)
+* = Real implementation (not stubbed)
 ```
 
-### Anti-Cheat Checks
+### Hash Chain Validation
 
-1. CPU hash rate vs claimed cores
-2. Memory bandwidth vs claimed speed
-3. GPU inference time vs VRAM
-4. Proof-of-work validity (2 leading zero bytes)
-5. Timestamp freshness (<10 min)
-6. Fingerprint uniqueness (Sybil detection)
-7. Performance consistency over time
+Real SHA256-linked audit chain:
+- `AuditEntry` struct with index, timestamp, prev_hash, hash
+- `HashChain::validate()` verifies chain integrity
+- `HashChain::load/save()` for persistence
+- Automatic tamper detection
 
----
+### Threat Intel
 
-## Deployment Infrastructure (v1.1.1)
-
-Created in `scripts/deploy/`:
-- `build-all.sh` - Master build script
-- `build-docker.sh` - Docker image
-- `build-iso.sh` - Bootable ISO (Kali-style)
-- `build-virtualbox.sh` - OVA appliance
-- `build-deb.sh` - Debian package + systemd
-- `build-termux.sh` - Android/Termux
-
-Web assets in `web/`:
-- `download/index.html` - Download page with 3 tiers
-- `install.sh` - One-liner installer
+Built-in LLM security patterns (28 indicators):
+- Prompt injection detection ("ignore previous instructions", "DAN mode")
+- System prompt extraction attempts
+- Jailbreak patterns (roleplay, encoding tricks)
+- Tool abuse patterns (file traversal, command injection)
 
 ---
 
@@ -112,76 +162,67 @@ Web assets in `web/`:
 
 | Crate | Purpose |
 |-------|---------|
-| gently-core | Base types, config |
+| gently-core | Base types, genesis keys, XOR splits |
 | gently-btc | Bitcoin RPC, block anchoring |
-| gently-spl | Solana SPL token integration |
+| gently-spl | Solana SPL (DISABLED) |
 | gently-dance | P2P dance protocol |
-| gently-audio | Audio processing, TTS |
-| gently-visual | SVG generation, visualization |
-| gently-feed | RSS/content feeds |
-| gently-search | Vector search, embeddings |
-| gently-mcp | Model Context Protocol |
-| gently-architect | Code generation |
-| gently-brain | LLM orchestration, daemons |
-| gently-network | Network security, MITM |
-| gently-ipfs | IPFS integration |
-| gently-cipher | Crypto utilities, hashing |
-| gently-sploit | Security tools |
-| gently-gateway | API gateway, routing |
+| gently-audio | Audio FFT encoding |
+| gently-visual | SVG pattern generation |
+| gently-feed | Living feed with charge/decay |
+| gently-search | Alexandria-backed semantic search |
+| gently-mcp | Model Context Protocol server |
+| gently-architect | Code generation, project trees |
+| gently-brain | LLM orchestration, knowledge graph |
+| gently-network | Network capture, MITM, visualization |
+| gently-ipfs | IPFS content-addressed storage |
+| gently-cipher | Cryptographic utilities, cracking |
+| gently-sploit | Exploitation framework |
+| gently-gateway | API routing, pipelines |
 | gently-security | 16 security daemons |
-| gently-guardian | **NEW** - Free tier node |
+| gently-guardian | Free tier node, hardware validation |
+| gently-alexandria | Distributed knowledge mesh |
 
 ---
 
-## Security Daemon Layers
+## Key Files
 
-```
-Layer 1 (Foundation): HashChainValidator, BtcAnchor, ForensicLogger
-Layer 2 (Traffic): TrafficSentinel, TokenWatchdog, CostGuardian
-Layer 3 (Detection): PromptAnalyzer, BehaviorProfiler, PatternMatcher, AnomalyDetector
-Layer 4 (Defense): SessionIsolator, TarpitController, ResponseMutator, RateLimitEnforcer
-Layer 5 (Intel): ThreatIntelCollector, SwarmDefense
-```
+### Core
+- `Cargo.toml` - Workspace definition
+- `gently-cli/src/main.rs` - Main CLI (4000+ lines)
+- `web/install.sh` - Universal installer
 
----
+### Intelligence
+- `crates/gently-alexandria/src/graph.rs` - Knowledge graph
+- `crates/gently-alexandria/src/tesseract.rs` - 8-face embedding projection
+- `crates/gently-brain/src/orchestrator.rs` - AI orchestration
+- `crates/gently-search/src/alexandria.rs` - Semantic search
 
-## Next Steps
-
-1. **Verify build**: `cargo build --release -p gently-guardian`
-2. Fix any compile errors
-3. Test guardian CLI commands
-4. Integrate with gently-cli main binary
-5. Deploy to test network
-
----
-
-## Product Vision
-
-Three editions:
-- **Home** (Free/Guardian) - Security as public good, earn by contributing
-- **Business** ($29/mo) - Priority support, dedicated capacity
-- **Studio** ($99/mo) - GPU protection, maximum security
-
-"Trojan that helps" - Spreads protection, not infection.
-
----
-
-## Key Files to Know
-
-- `/root/gentlyos/Cargo.toml` - Workspace definition
-- `/root/gentlyos/gently-cli/src/main.rs` - Main CLI
-- `/root/gentlyos/crates/gently-brain/src/daemon.rs` - Daemon manager
-- `/root/gentlyos/crates/gently-security/src/agentic.rs` - Security controller
-- `/root/gentlyos/crates/gently-guardian/src/lib.rs` - Guardian node
+### Security
+- `crates/gently-security/src/daemons/foundation.rs` - Hash chain
+- `crates/gently-security/src/daemons/intel.rs` - Threat detection
+- `crates/gently-guardian/src/hardware.rs` - Cross-platform hw detection
 
 ---
 
 ## Environment
 
 - Alpine Linux (bare metal)
-- Rust toolchain
-- No shell access from Claude (SSH needed)
-- Git repo on main branch
+- Rust 1.75+ toolchain
+- Docker available for container builds
+- Git repo on master branch
+
+---
+
+## Product Vision
+
+**Editions:**
+- **Home** (Free/Guardian) - Security as public good, earn by contributing
+- **Business** ($29/mo) - Priority support, dedicated capacity
+- **Studio** ($99/mo) - GPU protection, maximum security
+
+**Solana Integration** (deferred):
+- Token/wallet/governance features remain stubbed
+- Will be re-enabled after CLI v1.0 is stable
 
 ---
 

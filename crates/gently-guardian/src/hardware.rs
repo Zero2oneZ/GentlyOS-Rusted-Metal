@@ -480,51 +480,174 @@ fn create_fingerprint(
 }
 
 // ============================================================================
-// FALLBACKS FOR OTHER PLATFORMS
+// CROSS-PLATFORM DETECTION (macOS, Windows, other Unix)
 // ============================================================================
 
 #[cfg(not(target_os = "linux"))]
 fn detect_cpu() -> anyhow::Result<CpuInfo> {
+    use sysinfo::System;
+
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    let cpus = sys.cpus();
+    let cpu_count = cpus.len() as u8;
+
+    // Get CPU info from first CPU (representative)
+    let (vendor, model, freq) = if let Some(cpu) = cpus.first() {
+        (
+            cpu.vendor_id().to_string(),
+            cpu.brand().to_string(),
+            cpu.frequency() as u32,
+        )
+    } else {
+        ("Unknown".to_string(), "Unknown CPU".to_string(), 2000)
+    };
+
+    // Physical cores = total / 2 (estimate for hyperthreading)
+    let physical_cores = (cpu_count / 2).max(1);
+
     Ok(CpuInfo {
-        vendor: "Unknown".to_string(),
-        model: "Unknown CPU".to_string(),
-        cores: num_cpus::get_physical() as u8,
-        threads: num_cpus::get() as u8,
-        base_freq_mhz: 2000,
-        max_freq_mhz: 3000,
-        cache_kb: 8192,
-        features: vec![],
+        vendor,
+        model,
+        cores: physical_cores,
+        threads: cpu_count,
+        base_freq_mhz: freq,
+        max_freq_mhz: freq,
+        cache_kb: 8192, // Not easily available cross-platform
+        features: vec![], // Platform-specific
     })
 }
 
 #[cfg(not(target_os = "linux"))]
 fn detect_memory() -> anyhow::Result<MemoryInfo> {
+    use sysinfo::System;
+
+    let mut sys = System::new_all();
+    sys.refresh_memory();
+
+    let total_bytes = sys.total_memory();
+    let available_bytes = sys.available_memory();
+
     Ok(MemoryInfo {
-        total_gb: 8,
-        available_gb: 4,
-        speed_mhz: 2400,
+        total_gb: (total_bytes / 1024 / 1024 / 1024) as u16,
+        available_gb: (available_bytes / 1024 / 1024 / 1024) as u16,
+        speed_mhz: 2400, // Not easily available cross-platform
         channels: 2,
     })
 }
 
 #[cfg(not(target_os = "linux"))]
 fn detect_gpu() -> Option<GpuInfo> {
+    // GPU detection on macOS/Windows would require platform-specific APIs
+    // Metal for macOS, DirectX/DXGI for Windows
+    // For now, return None (can be enhanced with wgpu or similar)
+
+    #[cfg(target_os = "macos")]
+    {
+        // On macOS, check for Apple Silicon GPU or discrete GPU
+        if let Ok(output) = Command::new("system_profiler")
+            .args(["SPDisplaysDataType", "-json"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if stdout.contains("Apple") {
+                return Some(GpuInfo {
+                    vendor: "Apple".to_string(),
+                    model: "Apple Silicon GPU".to_string(),
+                    vram_gb: 0, // Unified memory
+                    compute_units: 10,
+                    driver_version: "Metal".to_string(),
+                    cuda_version: None,
+                    rocm_version: None,
+                });
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, try wmic for GPU info
+        if let Ok(output) = Command::new("wmic")
+            .args(["path", "win32_VideoController", "get", "name,adapterram"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                if !line.trim().is_empty() {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if !parts.is_empty() {
+                        let model = parts.join(" ");
+                        let vendor = if model.to_lowercase().contains("nvidia") {
+                            "NVIDIA"
+                        } else if model.to_lowercase().contains("amd") || model.to_lowercase().contains("radeon") {
+                            "AMD"
+                        } else if model.to_lowercase().contains("intel") {
+                            "Intel"
+                        } else {
+                            "Unknown"
+                        };
+
+                        return Some(GpuInfo {
+                            vendor: vendor.to_string(),
+                            model,
+                            vram_gb: 4, // Would need DirectX query for accurate value
+                            compute_units: 20,
+                            driver_version: "unknown".to_string(),
+                            cuda_version: None,
+                            rocm_version: None,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     None
 }
 
 #[cfg(not(target_os = "linux"))]
 fn detect_storage() -> anyhow::Result<StorageInfo> {
+    use sysinfo::Disks;
+
+    let disks = Disks::new_with_refreshed_list();
+
+    let mut total_bytes: u64 = 0;
+    let mut available_bytes: u64 = 0;
+    let mut is_ssd = true; // Assume SSD on modern systems
+
+    for disk in disks.list() {
+        total_bytes += disk.total_space();
+        available_bytes += disk.available_space();
+
+        // Check disk kind if available
+        match disk.kind() {
+            sysinfo::DiskKind::HDD => is_ssd = false,
+            sysinfo::DiskKind::SSD => {}
+            _ => {}
+        }
+    }
+
+    // Estimate speeds based on SSD status
+    let (read_speed, write_speed) = if is_ssd {
+        (500, 450) // Typical SATA SSD
+    } else {
+        (150, 130) // Typical HDD
+    };
+
     Ok(StorageInfo {
-        total_gb: 256,
-        available_gb: 128,
-        is_ssd: true,
-        read_speed_mbps: 500,
-        write_speed_mbps: 450,
+        total_gb: (total_bytes / 1024 / 1024 / 1024) as u32,
+        available_gb: (available_bytes / 1024 / 1024 / 1024) as u32,
+        is_ssd,
+        read_speed_mbps: read_speed,
+        write_speed_mbps: write_speed,
     })
 }
 
 #[cfg(not(target_os = "linux"))]
 fn detect_network() -> anyhow::Result<NetworkInfo> {
+    // Network speed detection requires actual speed tests or interface queries
+    // Return conservative defaults
     Ok(NetworkInfo {
         download_mbps: 100,
         upload_mbps: 50,

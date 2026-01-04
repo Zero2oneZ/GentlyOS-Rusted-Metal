@@ -362,7 +362,7 @@ impl ReportApp {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Blue)))
-        .row_highlight_style(Style::default().bg(Color::DarkGray));
+        .highlight_style(Style::default().bg(Color::DarkGray));
 
         frame.render_widget(table, area);
     }

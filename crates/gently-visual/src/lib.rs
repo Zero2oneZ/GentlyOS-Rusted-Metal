@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 //! # GentlyOS Visual Engine
 //!
 //! Generates animated SVG patterns for Dance protocol.

@@ -8,12 +8,32 @@ description = "Local Llama 1B + Embedder for GentlyOS - the growing brain"
 [dependencies]
 gently-core.workspace = true
 gently-search.workspace = true
+gently-alexandria.workspace = true
 
-# GGUF/ONNX inference
+# Fastembed - Pure Rust embeddings with ONNX backend
+# Uses ort (ONNX Runtime) internally
+fastembed = { version = "4", optional = true }
+
+# Candle - Pure Rust ML framework for local LLM inference
+candle-core = { version = "0.8", optional = true }
+candle-nn = { version = "0.8", optional = true }
+candle-transformers = { version = "0.8", optional = true }
+hf-hub = { version = "0.3", features = ["tokio"], optional = true }
+tokenizers = { version = "0.20", optional = true }
+
 # Serialization
-ort = { version = "=2.0.0-rc.10", features = ["load-dynamic"] }  # ONNX Runtime 2.0
 serde.workspace = true
 serde_json.workspace = true
+
+# Crypto
+sha2.workspace = true
+rand.workspace = true
+
+# Filesystem
+dirs.workspace = true
+
+# Database
+rusqlite = { workspace = true }
 
 # Async
 tokio.workspace = true
@@ -34,5 +54,7 @@ uuid.workspace = true
 hex.workspace = true
 
 [features]
-default = []
-cuda = []  # Optional CUDA acceleration
+default = []  # No ML by default (simulated embeddings)
+cuda = []     # Optional CUDA acceleration
+candle = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers", "dep:hf-hub", "dep:tokenizers"]
+fastembed = ["dep:fastembed"]  # Real embeddings (requires ONNX Runtime)

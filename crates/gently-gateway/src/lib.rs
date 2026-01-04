@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! GentlyOS Gateway
 //!
 //! THE BOTTLENECK API - All AI models MUST pass through here.

@@ -515,7 +515,10 @@ mod tests {
             embeddings_created: 5,
             storage_served_mb: 2,
             merkle_root: [1u8; 32],
-            signature: [0u8; 64],
+            signature: [0u8; 64].to_vec(),
+            alexandria_edges_served: 0,
+            alexandria_deltas_synced: 0,
+            alexandria_wormholes_found: 0,
         };
 
         assert!(validator.validate_contribution(&proof));
@@ -533,7 +536,10 @@ mod tests {
             embeddings_created: 0,
             storage_served_mb: 0,
             merkle_root: [0u8; 32],
-            signature: [0u8; 64],
+            signature: [0u8; 64].to_vec(),
+            alexandria_edges_served: 0,
+            alexandria_deltas_synced: 0,
+            alexandria_wormholes_found: 0,
         };
 
         assert!(validator.validate_contribution(&proof));

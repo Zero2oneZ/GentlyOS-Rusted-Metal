@@ -389,6 +389,7 @@ mod tests {
         let bait = system.get_bait(&HoneypotType::FakeCredential);
 
         assert!(bait.is_some());
-        assert!(bait.unwrap().contains("HONEYPOT"));
+        // Check case-insensitively since different honeypots use different casing
+        assert!(bait.unwrap().to_lowercase().contains("honeypot"));
     }
 }

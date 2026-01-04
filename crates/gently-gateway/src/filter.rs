@@ -163,9 +163,8 @@ pub struct RateLimitFilter {
     max_rpm: usize,
     /// Maximum tokens per minute
     max_tpm: usize,
-    /// Request counts (in production, use proper storage)
-    // Note: This is a simplified version. Real implementation needs
-    // proper time-windowed counting with thread-safe storage.
+    // Note: Request counts storage not included in this simplified version.
+    // Real implementation needs proper time-windowed counting with thread-safe storage.
 }
 
 impl RateLimitFilter {

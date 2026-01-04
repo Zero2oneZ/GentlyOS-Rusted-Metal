@@ -28,3 +28,5 @@ tracing = "0.1"
 base64 = "0.21"
 dirs.workspace = true
 chrono.workspace = true
+uuid.workspace = true
+serde_yaml = "0.9"

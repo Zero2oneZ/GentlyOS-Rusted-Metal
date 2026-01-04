@@ -62,7 +62,7 @@ impl ToolContext {
         // Save feed
         if let Ok(storage) = FeedStorage::default_location() {
             let feed = self.feed.read().unwrap();
-            storage.save(&feed)?;
+            storage.save(&feed).map_err(|e| Error::ExecutionError(e.to_string()))?;
         }
 
         // Save index

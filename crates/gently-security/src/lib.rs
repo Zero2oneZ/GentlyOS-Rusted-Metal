@@ -1,3 +1,5 @@
+//!
+#![allow(dead_code, unused_imports, unused_variables)]
 //! GentlyOS Security Layer
 //!
 //! "IT'S DEFINITELY ATTACKING YOUR COMPUTER"

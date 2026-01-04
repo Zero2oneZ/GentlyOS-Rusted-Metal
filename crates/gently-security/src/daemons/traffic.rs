@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::time::{Duration, Instant};
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::mpsc;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Datelike};
 
 /// Traffic Sentinel Daemon
 /// Monitors request patterns and learns baselines
@@ -738,12 +738,14 @@ mod tests {
         // Should pass - under limit
         assert!(guardian.check_limit("anthropic", 10.0));
 
-        // Record usage up to limit
-        for _ in 0..5 {
-            guardian.record_usage("anthropic", 100000, 100000);
+        // Record usage to exceed daily limit of $50
+        // Each call: (1000000/1000) * 0.008 + (1000000/1000) * 0.024 = 1000 * 0.032 = $32
+        // Two calls = $64 > $50 daily limit
+        for _ in 0..2 {
+            guardian.record_usage("anthropic", 1000000, 1000000);
         }
 
-        // Now should fail - over limit
+        // Now should fail - over daily limit ($64 > $50)
         assert!(!guardian.check_limit("anthropic", 10.0));
     }
 

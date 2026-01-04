@@ -108,17 +108,19 @@ impl KeyVault {
     }
 
     /// Get a decrypted key
+    /// Get a decrypted key
     pub fn get(&mut self, service: &str) -> Option<String> {
-        let entry = self.manifest.entries.get_mut(service)?;
+        let (salt, encrypted) = {
+            let entry = self.manifest.entries.get(service)?;
+            (entry.salt.clone(), entry.encrypted_key.clone())
+        };
 
-        // Derive key
-        let derived_key = self.derive_key(service, &entry.salt);
+        let derived_key = self.derive_key(service, &salt);
+        let decrypted = xor_encrypt(&encrypted, &derived_key);
 
-        // Decrypt
-        let decrypted = xor_encrypt(&entry.encrypted_key, &derived_key);
-
-        // Update last accessed
-        entry.last_accessed = Some(chrono::Utc::now().timestamp());
+        if let Some(entry) = self.manifest.entries.get_mut(service) {
+            entry.last_accessed = Some(chrono::Utc::now().timestamp());
+        }
 
         String::from_utf8(decrypted).ok()
     }
@@ -201,7 +203,11 @@ impl KeyVault {
         use sha2::{Sha256, Digest};
 
         let mut hasher = Sha256::new();
-        for (service, entry) in &self.manifest.entries {
+        // Sort by key to ensure deterministic ordering
+        let mut keys: Vec<_> = self.manifest.entries.keys().collect();
+        keys.sort();
+        for service in keys {
+            let entry = &self.manifest.entries[service];
             hasher.update(service.as_bytes());
             hasher.update(&entry.encrypted_key);
         }
@@ -219,7 +225,11 @@ impl KeyVault {
         use sha2::{Sha256, Digest};
 
         let mut hasher = Sha256::new();
-        for (service, entry) in &self.manifest.entries {
+        // Sort by key to ensure deterministic ordering
+        let mut keys: Vec<_> = self.manifest.entries.keys().collect();
+        keys.sort();
+        for service in keys {
+            let entry = &self.manifest.entries[service];
             hasher.update(service.as_bytes());
             hasher.update(&entry.encrypted_key);
         }
