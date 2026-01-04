@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-01-04
 **Lines of Code**: ~35,000+
-**Crates**: 17 Rust crates (Solana disabled)
+**Crates**: 18 Rust crates (Solana disabled)
 
 ---
 
@@ -40,6 +40,7 @@
 | gently-search | 70% | Alexandria routing, Tesseract projection |
 | gently-alexandria | 75% | Graph + Tesseract work, persistence |
 | gently-sploit | 20% | Framework only |
+| gently-sim | 80% | SIM card security: filesystem, applets, OTA, Simjacker |
 | gently-spl | DISABLED | Solana version conflicts |
 
 ---
@@ -158,7 +159,7 @@ Built-in LLM security patterns (28 indicators):
 
 ---
 
-## 17 Crates Overview
+## 18 Crates Overview
 
 | Crate | Purpose |
 |-------|---------|
@@ -181,6 +182,7 @@ Built-in LLM security patterns (28 indicators):
 | gently-security | 16 security daemons |
 | gently-guardian | Free tier node, hardware validation |
 | gently-alexandria | Distributed knowledge mesh |
+| gently-sim | SIM card security monitoring |
 
 ---
 

@@ -20,6 +20,7 @@ members = [
     "crates/gently-gateway",
     "crates/gently-alexandria",
     "gently-cli",
+    "crates/gently-sim",
     # "crates/gently-spl",  # Disabled: Solana dependency version conflicts
     # "crates/gently-py",   # Disabled: PyO3 doesn't support musl-linux (Alpine)
 ]
@@ -87,6 +88,7 @@ gently-security = { path = "crates/gently-security" }
 gently-gateway = { path = "crates/gently-gateway" }
 gently-guardian = { path = "crates/gently-guardian" }
 gently-alexandria = { path = "crates/gently-alexandria" }
+gently-sim = { path = "crates/gently-sim" }
 # gently-spl excluded: Solana dependency version conflicts
 # gently-py excluded: PyO3 doesn't support musl-linux
 
@@ -119,6 +121,7 @@ hex = "0.4"
 
 # Network security dependencies
 pcap = "1.1"
+pcsc = "2"
 pnet = "0.34"
 httparse = "1.8"
 rustls = "0.22"

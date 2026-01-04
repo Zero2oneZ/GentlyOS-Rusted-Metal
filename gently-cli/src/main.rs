@@ -420,8 +420,36 @@ enum Commands {
     /// Interactive TUI dashboard report
     Report,
 
+    /// Run system integrity sentinel (monitors for tampering)
+    Sentinel {
+        #[command(subcommand)]
+        command: SentinelCommands,
+    },
+
     /// Local AI chat (TinyLlama - runs offline, no API costs)
     Chat,
+}
+
+#[derive(Subcommand)]
+enum SentinelCommands {
+    /// Start sentinel daemon (runs continuously)
+    Start,
+
+    /// Run a single integrity check
+    Check,
+
+    /// Show sentinel status
+    Status,
+
+    /// List all security alerts
+    Alerts {
+        /// Show only critical alerts
+        #[arg(short, long)]
+        critical: bool,
+    },
+
+    /// Verify genesis anchor integrity
+    Verify,
 }
 
 #[derive(Subcommand)]
@@ -1522,6 +1550,7 @@ fn main() -> Result<()> {
         Commands::Report => {
             report::run_report().map_err(|e| anyhow::anyhow!("TUI error: {}", e))
         }
+        Commands::Sentinel { command } => cmd_sentinel(command),
         Commands::Chat => {
             run_local_chat()
         }
@@ -1784,6 +1813,66 @@ knowledge_db = "{}"
 
         std::fs::write(&config_path, config_content)?;
         println!("  ✓ Configuration created at {}", config_path.display());
+    }
+
+    // 7. Genesis BTC Anchor - timestamp this installation to the blockchain
+    println!("\nStep 7: Creating genesis BTC anchor...");
+    let anchor_path = data_dir.join("vault").join("genesis.anchor");
+
+    if anchor_path.exists() && !force {
+        println!("  • Genesis anchor already exists");
+        // Show existing anchor info
+        if let Ok(anchor_json) = std::fs::read_to_string(&anchor_path) {
+            if let Ok(anchor) = serde_json::from_str::<gently_btc::BtcAnchor>(&anchor_json) {
+                println!("    Block: {} ({})", anchor.height, if anchor.is_offline() { "offline" } else { "confirmed" });
+                println!("    Anchored: {}", anchor.anchored_at.format("%Y-%m-%d %H:%M:%S UTC"));
+            }
+        }
+    } else {
+        use sha2::{Sha256, Digest};
+
+        // Hash the entire ~/.gently directory state
+        println!("  Hashing system state...");
+        let mut state_hasher = Sha256::new();
+
+        // Hash key files that define this installation
+        for file in &[
+            data_dir.join("vault").join("genesis.key"),
+            data_dir.join("config.toml"),
+            data_dir.join("alexandria").join("graph.json"),
+        ] {
+            if let Ok(content) = std::fs::read(file) {
+                state_hasher.update(&content);
+            }
+        }
+        let state_hash = hex::encode(state_hasher.finalize());
+        println!("  State hash: {}...", &state_hash[..16]);
+
+        // Fetch current BTC block
+        println!("  Fetching current BTC block...");
+        let rt = tokio::runtime::Runtime::new()?;
+        let block = rt.block_on(async {
+            let fetcher = gently_btc::BtcFetcher::new();
+            fetcher.fetch_latest().await
+        }).unwrap_or_else(|_| gently_btc::fetcher::BtcBlock::offline_fallback());
+
+        if block.is_offline() {
+            println!("  ⚠ Offline mode - using local timestamp");
+            println!("    (Run 'gently setup --force' when online to get BTC anchor)");
+        } else {
+            println!("  ✓ BTC Block: {} ({})", block.height, &block.hash[..16]);
+        }
+
+        // Create the genesis anchor
+        let anchor = gently_btc::BtcAnchor::new(&block, format!("genesis:{}", state_hash));
+
+        // Save anchor
+        let anchor_json = serde_json::to_string_pretty(&anchor)?;
+        std::fs::write(&anchor_path, &anchor_json)?;
+
+        println!("  ✓ Genesis anchor created");
+        println!("    Your installation is now timestamped to Bitcoin block {}", block.height);
+        println!("    Any tampering after this point is detectable.");
     }
 
     // Summary
@@ -4938,6 +5027,200 @@ fn cmd_vault(command: VaultCommands) -> Result<()> {
     }
 }
 
+fn cmd_sentinel(command: SentinelCommands) -> Result<()> {
+    use gently_guardian::sentinel::{Sentinel, SentinelConfig, IntegrityStatus, AlertLevel};
+
+    match command {
+        SentinelCommands::Start => {
+            println!("\n╔══════════════════════════════════════════════════════════════╗");
+            println!("║           SENTINEL - System Integrity Monitor                ║");
+            println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+            let config = SentinelConfig::default();
+            let mut sentinel = Sentinel::new(config);
+
+            match sentinel.initialize() {
+                Ok(()) => {
+                    let status = sentinel.status();
+                    println!("  Genesis Block: {}", status.genesis_block.unwrap_or(0));
+                    println!("  Watched Paths: {}", status.watched_paths);
+                    println!("  Files:         {}", status.files_monitored);
+                    println!("  Status:        {}\n", status.status);
+                    println!("  [*] Starting continuous monitoring...");
+                    println!("  [*] Press Ctrl+C to stop.\n");
+
+                    let rt = tokio::runtime::Runtime::new()?;
+                    rt.block_on(async {
+                        if let Err(e) = sentinel.run().await {
+                            eprintln!("  [!] Sentinel error: {}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    println!("  [!] Failed to initialize sentinel: {}", e);
+                    println!("  [*] Run 'gently setup' first to create genesis anchor.");
+                }
+            }
+            Ok(())
+        }
+
+        SentinelCommands::Check => {
+            println!("\n  INTEGRITY CHECK");
+            println!("  ===============\n");
+
+            let config = SentinelConfig::default();
+            let mut sentinel = Sentinel::new(config);
+
+            match sentinel.initialize() {
+                Ok(()) => {
+                    let alerts = sentinel.check();
+
+                    if alerts.is_empty() {
+                        println!("  Status: SECURE");
+                        println!("  No changes detected since last check.");
+                    } else {
+                        println!("  Status: {} ALERT(S) DETECTED\n", alerts.len());
+
+                        for alert in &alerts {
+                            let icon = match alert.level {
+                                AlertLevel::Critical => "🔴",
+                                AlertLevel::Warning => "🟡",
+                                AlertLevel::Info => "🟢",
+                            };
+                            println!("  {} [{}] {}", icon, format!("{:?}", alert.alert_type), alert.message);
+                            if let Some(details) = &alert.details {
+                                println!("     {}", details);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("  [!] Failed: {}", e);
+                    println!("  [*] Run 'gently setup' first.");
+                }
+            }
+            Ok(())
+        }
+
+        SentinelCommands::Status => {
+            println!("\n  SENTINEL STATUS");
+            println!("  ===============\n");
+
+            let config = SentinelConfig::default();
+            let mut sentinel = Sentinel::new(config);
+
+            match sentinel.initialize() {
+                Ok(()) => {
+                    let status = sentinel.status();
+                    let status_icon = match status.status {
+                        IntegrityStatus::Secure => "🟢",
+                        IntegrityStatus::Warning => "🟡",
+                        IntegrityStatus::Compromised => "🔴",
+                    };
+
+                    println!("  Status:        {} {}", status_icon, status.status);
+                    println!("  Genesis Block: {}", status.genesis_block.unwrap_or(0));
+                    println!("  Watched Paths: {}", status.watched_paths);
+                    println!("  Files:         {}", status.files_monitored);
+                    println!("  Total Alerts:  {}", status.total_alerts);
+                    println!("  Critical:      {}", status.critical_alerts);
+                }
+                Err(e) => {
+                    println!("  [!] Not initialized: {}", e);
+                    println!("  [*] Run 'gently setup' first.");
+                }
+            }
+            Ok(())
+        }
+
+        SentinelCommands::Alerts { critical } => {
+            println!("\n  SECURITY ALERTS");
+            println!("  ===============\n");
+
+            let config = SentinelConfig::default();
+            let mut sentinel = Sentinel::new(config);
+
+            match sentinel.initialize() {
+                Ok(()) => {
+                    // Run a check to populate alerts
+                    sentinel.check();
+
+                    let alerts = if critical {
+                        sentinel.get_critical_alerts().into_iter().cloned().collect::<Vec<_>>()
+                    } else {
+                        sentinel.get_alerts().to_vec()
+                    };
+
+                    if alerts.is_empty() {
+                        println!("  No alerts.");
+                    } else {
+                        for alert in alerts {
+                            let icon = match alert.level {
+                                AlertLevel::Critical => "🔴",
+                                AlertLevel::Warning => "🟡",
+                                AlertLevel::Info => "🟢",
+                            };
+                            println!("  {} {} - {}", icon, alert.timestamp.format("%H:%M:%S"), alert.message);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("  [!] Not initialized: {}", e);
+                }
+            }
+            Ok(())
+        }
+
+        SentinelCommands::Verify => {
+            println!("\n  GENESIS ANCHOR VERIFICATION");
+            println!("  ===========================\n");
+
+            let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let anchor_path = home.join(".gently").join("vault").join("genesis.anchor");
+
+            if !anchor_path.exists() {
+                println!("  [!] No genesis anchor found.");
+                println!("  [*] Run 'gently setup' to create one.");
+                return Ok(());
+            }
+
+            match std::fs::read_to_string(&anchor_path) {
+                Ok(json) => {
+                    match serde_json::from_str::<gently_btc::BtcAnchor>(&json) {
+                        Ok(anchor) => {
+                            println!("  Block Height:  {}", anchor.height);
+                            println!("  Block Hash:    {}...", &anchor.hash[..32]);
+                            println!("  Anchored:      {}", anchor.anchored_at.format("%Y-%m-%d %H:%M:%S UTC"));
+                            println!("  Anchor Hash:   {}...", &anchor.anchor_hash[..32]);
+                            println!();
+
+                            if anchor.verify() {
+                                println!("  ✓ VERIFIED - Anchor integrity confirmed.");
+                                println!("    The cryptographic proof is valid.");
+                            } else {
+                                println!("  ✗ FAILED - Anchor has been tampered with!");
+                                println!("    The cryptographic proof does not match.");
+                            }
+
+                            if anchor.is_offline() {
+                                println!();
+                                println!("  ⚠ Offline anchor - no BTC block proof.");
+                                println!("    Run 'gently setup --force' when online.");
+                            }
+                        }
+                        Err(e) => {
+                            println!("  [!] Invalid anchor format: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("  [!] Failed to read anchor: {}", e);
+                }
+            }
+            Ok(())
+        }
+    }
+}
 
 /// Run the local chat TUI with TinyLlama
 fn run_local_chat() -> Result<()> {

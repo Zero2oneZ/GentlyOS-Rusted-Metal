@@ -42,6 +42,7 @@ gently-network.workspace = true
 gently-ipfs.workspace = true
 gently-cipher.workspace = true
 gently-sploit.workspace = true
+gently-guardian.workspace = true
 
 clap.workspace = true
 tokio.workspace = true

@@ -33,12 +33,14 @@ pub mod benchmark;
 pub mod contribution;
 pub mod rewards;
 pub mod anti_cheat;
+pub mod sentinel;
 
 pub use hardware::*;
 pub use benchmark::*;
 pub use contribution::*;
 pub use rewards::*;
 pub use anti_cheat::*;
+pub use sentinel::*;
 
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
