@@ -38,20 +38,49 @@ gently-btc      ─► Genesis anchoring
 gently-cli      ─► Command interface
 ```
 
+## Installation
+
+### One-liner (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zero2oneZ/GentlyOS-Rusted-Metal/main/web/install.sh | sudo bash
+```
+
+### From Release
+
+Download from [Releases](https://github.com/Zero2oneZ/GentlyOS-Rusted-Metal/releases):
+- `gently-linux-amd64` - Linux CLI
+- `gently-darwin-amd64` - macOS CLI (coming soon)
+
+```bash
+chmod +x gently-linux-amd64
+sudo mv gently-linux-amd64 /usr/local/bin/gently
+gently setup
+```
+
+### From Source
+
+```bash
+git clone https://github.com/Zero2oneZ/GentlyOS-Rusted-Metal
+cd GentlyOS-Rusted-Metal
+cargo build --release
+./target/release/gently setup
+```
+
 ## Quick Start
 
 ```bash
-# Build
-cargo build --release
+# Initialize (first time)
+gently setup
 
-# Initialize genesis
-./target/release/gently init
+# Chat with AI
+gently chat
 
-# Store a blob
-./target/release/gently blob store "hello world"
+# Run TUI
+gentlyos-tui
 
-# Run brain
-./target/release/gently brain chat
+# Check status
+gently status
 ```
 
 ## Docker

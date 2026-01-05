@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev
+
+      - name: Build CLI
+        run: cargo build --release -p gently-cli
+
+      - name: Build TUI
+        run: cargo build --release -p gentlyos-tui
+
+      - name: Package binaries
+        run: |
+          mkdir -p release
+          cp target/release/gently release/gently-linux-amd64
+          cp target/release/gentlyos-tui release/gentlyos-tui-linux-amd64
+          chmod +x release/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-binaries
+          path: release/
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build CLI
+        run: cargo build --release -p gently-cli
+
+      - name: Build TUI
+        run: cargo build --release -p gentlyos-tui
+
+      - name: Package binaries
+        run: |
+          mkdir -p release
+          cp target/release/gently release/gently-darwin-amd64
+          cp target/release/gentlyos-tui release/gentlyos-tui-darwin-amd64
+          chmod +x release/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-binaries
+          path: release/
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-binaries
+          path: release/
+
+      - name: Download macOS binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-binaries
+          path: release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/*
+          body: |
+            ## GentlyOS ${{ github.ref_name }}
+
+            AI-powered distributed operating system with BONEBLOB constraint optimization.
+
+            ### Install
+
+            **One-liner (Linux/macOS):**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/Zero2oneZ/GentlyOS-Rusted-Metal/main/web/install.sh | sudo bash
+            ```
+
+            ### Binaries
+            - `gently-linux-amd64` - Linux CLI
+            - `gently-darwin-amd64` - macOS CLI
+            - `gentlyos-tui-linux-amd64` - Linux TUI
+            - `gentlyos-tui-darwin-amd64` - macOS TUI
+
+            See [CHANGELOG.md](https://github.com/Zero2oneZ/GentlyOS-Rusted-Metal/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
