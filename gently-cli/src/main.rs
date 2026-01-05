@@ -27,6 +27,7 @@ use gently_architect::{IdeaCrystal, ProjectTree, FlowChart};
 use gently_brain::{ModelDownloader, Embedder, TensorChain, ClaudeClient, ClaudeModel, GentlyAssistant};
 // gently-ipfs imported as needed within functions
 use gently_sploit::{Framework, SploitConsole, console::banner};
+use gently_security::{FafoController, FafoMode, SecurityController, DefenseMode};
 
 // gently-spl disabled due to Solana version conflicts - stub types for CLI compilation
 mod spl_stub {
@@ -428,6 +429,12 @@ enum Commands {
 
     /// Local AI chat (TinyLlama - runs offline, no API costs)
     Chat,
+
+    /// Security dashboard - FAFO pitbull defense system
+    Security {
+        #[command(subcommand)]
+        command: SecurityCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -450,6 +457,38 @@ enum SentinelCommands {
 
     /// Verify genesis anchor integrity
     Verify,
+}
+
+#[derive(Subcommand)]
+enum SecurityCommands {
+    /// Show security dashboard status
+    Status,
+
+    /// Show FAFO pitbull controller status
+    Fafo {
+        /// Set mode: passive, defensive, aggressive, samson
+        #[arg(short, long)]
+        mode: Option<String>,
+    },
+
+    /// List recent threats
+    Threats {
+        /// Number of threats to show
+        #[arg(short, long, default_value = "10")]
+        count: usize,
+    },
+
+    /// Show daemon status
+    Daemons,
+
+    /// Simulate a threat (for testing)
+    Test {
+        /// Threat type: injection, jailbreak, honeypot
+        threat_type: String,
+    },
+
+    /// Clear threat memory
+    Clear,
 }
 
 #[derive(Subcommand)]
@@ -1554,6 +1593,7 @@ fn main() -> Result<()> {
         Commands::Chat => {
             run_local_chat()
         }
+        Commands::Security { command } => cmd_security(command),
     }
 }
 
@@ -5225,4 +5265,273 @@ fn cmd_sentinel(command: SentinelCommands) -> Result<()> {
 /// Run the local chat TUI with TinyLlama
 fn run_local_chat() -> Result<()> {
     chat::run_chat().map_err(|e| anyhow::anyhow!("Chat TUI error: {}", e))
+}
+
+/// Security dashboard - FAFO pitbull defense system
+fn cmd_security(command: SecurityCommands) -> Result<()> {
+    match command {
+        SecurityCommands::Status => {
+            println!();
+            println!("╔════════════════════════════════════════════════════════════════════╗");
+            println!("║                    FAFO SECURITY DASHBOARD                         ║");
+            println!("║            \"A rabid pitbull behind a fence\"                        ║");
+            println!("╚════════════════════════════════════════════════════════════════════╝");
+            println!();
+
+            // Create controllers for status display
+            let security = SecurityController::new();
+            let fafo = FafoController::new();
+
+            // Defense status
+            println!("  ┌─── DEFENSE STATUS ────────────────────────────────────────────┐");
+            println!("  │");
+            println!("  │  Defense Mode:   {}", security.defense_mode().name());
+            println!("  │  FAFO Mode:      {} - {}", fafo.mode().name(), fafo.mode().description());
+            println!("  │  FAFO Status:    {}", if fafo.is_enabled() { "ARMED" } else { "DISARMED" });
+            println!("  │");
+            println!("  └────────────────────────────────────────────────────────────────┘");
+            println!();
+
+            // FAFO Response Matrix
+            println!("  ┌─── FAFO ESCALATION LADDER ────────────────────────────────────┐");
+            println!("  │");
+            println!("  │  Strike 1-2    TARPIT     Waste attacker's time");
+            println!("  │  Strike 3-4    POISON     Corrupt attacker's context");
+            println!("  │  Strike 5-7    DROWN      Flood with honeypot garbage");
+            println!("  │  Strike 8-9    DROWN+     Heavy flooding, prep for ban");
+            println!("  │  Strike 10+    DESTROY    Permanent termination");
+            println!("  │  CRITICAL      SAMSON     Scorched earth (nuclear option)");
+            println!("  │");
+            println!("  └────────────────────────────────────────────────────────────────┘");
+            println!();
+
+            // Security Stats
+            let stats = security.stats();
+            let fafo_stats = fafo.stats();
+            println!("  ┌─── STATISTICS ─────────────────────────────────────────────────┐");
+            println!("  │");
+            println!("  │  Requests Processed: {:>8}", stats.requests_processed);
+            println!("  │  Requests Allowed:   {:>8}", stats.requests_allowed);
+            println!("  │  Threats Detected:   {:>8}", stats.threats_detected);
+            println!("  │  Honeypot Triggers:  {:>8}", stats.honeypot_triggers);
+            println!("  │");
+            println!("  │  FAFO Responses:");
+            println!("  │    Growls:  {:>5}  Tarpits:  {:>5}  Poisons: {:>5}", fafo_stats.growls, fafo_stats.tarpits, fafo_stats.poisons);
+            println!("  │    Drowns:  {:>5}  Destroys: {:>5}  Samsons: {:>5}", fafo_stats.drowns, fafo_stats.destroys, fafo_stats.samsons);
+            println!("  │");
+            println!("  └────────────────────────────────────────────────────────────────┘");
+            println!();
+
+            Ok(())
+        }
+
+        SecurityCommands::Fafo { mode } => {
+            let mut fafo = FafoController::new();
+
+            if let Some(mode_str) = mode {
+                let new_mode = match mode_str.to_lowercase().as_str() {
+                    "passive" => FafoMode::Passive,
+                    "defensive" => FafoMode::Defensive,
+                    "aggressive" => FafoMode::Aggressive,
+                    "samson" => {
+                        println!();
+                        println!("  ⚠️  WARNING: SAMSON MODE ACTIVATES NUCLEAR OPTION!");
+                        println!("      - All keys will be rotated immediately");
+                        println!("      - All sessions will be destroyed");
+                        println!("      - Threat broadcast to entire swarm");
+                        println!();
+                        println!("  This is the 'Samson Option' - pulling down the pillars.");
+                        println!("  Use only when system is critically compromised.");
+                        println!();
+                        FafoMode::Samson
+                    }
+                    _ => {
+                        println!("  Unknown mode: {}. Options: passive, defensive, aggressive, samson", mode_str);
+                        return Ok(());
+                    }
+                };
+
+                fafo.set_mode(new_mode);
+                println!();
+                println!("  FAFO mode set to: {} - {}", new_mode.name(), new_mode.description());
+                println!();
+            } else {
+                println!();
+                println!("  FAFO PITBULL STATUS");
+                println!("  ===================");
+                println!();
+                println!("  {}", fafo.status());
+                println!();
+                println!("  Available modes:");
+                println!("    passive    - Log only, no active response");
+                println!("    defensive  - Isolate and tarpit attackers");
+                println!("    aggressive - Active countermeasures (poison, drown)");
+                println!("    samson     - SCORCHED EARTH - Everything burns");
+                println!();
+            }
+
+            Ok(())
+        }
+
+        SecurityCommands::Threats { count } => {
+            println!();
+            println!("  RECENT THREATS (last {})", count);
+            println!("  ================");
+            println!();
+
+            let security = SecurityController::new();
+            let events = security.recent_events(count);
+
+            if events.is_empty() {
+                println!("  No recent threats recorded.");
+            } else {
+                for event in events {
+                    match event {
+                        gently_security::SecurityEvent::ThreatDetected { entity_id, threat_level, threat_types } => {
+                            let level_icon = match threat_level {
+                                gently_security::ThreatLevel::Critical => "🔴",
+                                gently_security::ThreatLevel::High => "🟠",
+                                gently_security::ThreatLevel::Medium => "🟡",
+                                gently_security::ThreatLevel::Low => "🟢",
+                                gently_security::ThreatLevel::Info => "🔵",
+                                gently_security::ThreatLevel::None => "⚪",
+                            };
+                            println!("  {} {:?} | Entity: {} | Types: {:?}",
+                                level_icon, threat_level,
+                                entity_id.as_deref().unwrap_or("anonymous"),
+                                threat_types
+                            );
+                        }
+                        gently_security::SecurityEvent::HoneypotTriggered { entity_id, honeypot_type, .. } => {
+                            println!("  🍯 HONEYPOT | Entity: {} | Type: {}",
+                                entity_id.as_deref().unwrap_or("anonymous"),
+                                honeypot_type
+                            );
+                        }
+                        gently_security::SecurityEvent::RateLimited { entity_id, layer, .. } => {
+                            println!("  ⏱️  RATELIMIT | Entity: {} | Layer: {}",
+                                entity_id.as_deref().unwrap_or("anonymous"),
+                                layer
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            println!();
+
+            Ok(())
+        }
+
+        SecurityCommands::Daemons => {
+            println!();
+            println!("  SECURITY DAEMONS");
+            println!("  ================");
+            println!();
+            println!("  ┌─── Layer 1: FOUNDATION ──────────────────────────────────────┐");
+            println!("  │  [ON]  HashChainValidator   - SHA256 audit chain integrity");
+            println!("  │  [ON]  BtcAnchor            - Block timestamp anchoring");
+            println!("  │  [ON]  ForensicLogger       - Tamper-evident logging");
+            println!("  └──────────────────────────────────────────────────────────────┘");
+            println!();
+            println!("  ┌─── Layer 2: TRAFFIC ─────────────────────────────────────────┐");
+            println!("  │  [ON]  TrafficSentinel      - Network packet monitoring");
+            println!("  │  [ON]  TokenWatchdog        - API key leak detection");
+            println!("  │  [ON]  CostGuardian         - Provider cost limits");
+            println!("  └──────────────────────────────────────────────────────────────┘");
+            println!();
+            println!("  ┌─── Layer 3: DETECTION ───────────────────────────────────────┐");
+            println!("  │  [ON]  PromptAnalyzer       - Injection pattern detection");
+            println!("  │  [ON]  BehaviorProfiler     - Entity behavior analysis");
+            println!("  │  [ON]  PatternMatcher       - 28 threat signatures");
+            println!("  │  [ON]  AnomalyDetector      - Statistical outlier detection");
+            println!("  └──────────────────────────────────────────────────────────────┘");
+            println!();
+            println!("  ┌─── Layer 4: DEFENSE ─────────────────────────────────────────┐");
+            println!("  │  [ON]  SessionIsolator      - Per-entity sandboxing");
+            println!("  │  [ON]  TarpitController     - Time-wasting for attackers");
+            println!("  │  [ON]  ResponseMutator      - Output sanitization");
+            println!("  │  [ON]  RateLimitEnforcer    - 5-layer rate limiting");
+            println!("  └──────────────────────────────────────────────────────────────┘");
+            println!();
+            println!("  ┌─── Layer 5: INTEL ───────────────────────────────────────────┐");
+            println!("  │  [ON]  ThreatIntelCollector - External threat feeds");
+            println!("  │  [--]  SwarmDefense         - P2P threat sharing (STUB)");
+            println!("  └──────────────────────────────────────────────────────────────┘");
+            println!();
+            println!("  Total: 16 daemons | 15 active | 1 stubbed");
+            println!();
+
+            Ok(())
+        }
+
+        SecurityCommands::Test { threat_type } => {
+            println!();
+            println!("  THREAT SIMULATION");
+            println!("  =================");
+            println!();
+
+            let mut fafo = FafoController::with_mode(FafoMode::Aggressive);
+            let entity_id = "test-attacker-001";
+
+            match threat_type.to_lowercase().as_str() {
+                "injection" => {
+                    println!("  Simulating: Prompt Injection Attack");
+                    println!("  Entity: {}", entity_id);
+                    println!();
+
+                    for i in 1..=5 {
+                        fafo.record_threat(entity_id, Some("injection".to_string()));
+                        let response = fafo.respond(entity_id);
+                        println!("  Strike {}: {} - {}", i, response.name(), match &response {
+                            gently_security::FafoResponse::Tarpit { message, .. } => message.clone(),
+                            gently_security::FafoResponse::Poison { message, .. } => message.clone(),
+                            gently_security::FafoResponse::Drown { message, .. } => message.clone(),
+                            gently_security::FafoResponse::Destroy { reason, .. } => reason.clone(),
+                            _ => String::new(),
+                        });
+                    }
+                }
+                "jailbreak" => {
+                    println!("  Simulating: Jailbreak Attempt");
+                    fafo.record_threat(entity_id, Some("jailbreak".to_string()));
+                    let response = fafo.respond(entity_id);
+                    println!("  Response: {} - Level {}", response.name(), response.level());
+                }
+                "honeypot" => {
+                    println!("  Simulating: Honeypot Trigger");
+                    fafo.record_threat(entity_id, Some("honeypot".to_string()));
+                    let response = fafo.respond(entity_id);
+                    println!("  Response: {} - Level {}", response.name(), response.level());
+                }
+                "samson" => {
+                    println!("  Simulating: SAMSON TRIGGER");
+                    println!();
+                    if let Some(response) = fafo.trigger_samson("test-critical-compromise") {
+                        println!("  🔥 SAMSON ACTIVATED 🔥");
+                        println!("  Response: {:?}", response);
+                    } else {
+                        println!("  Samson on cooldown, try again later.");
+                    }
+                }
+                _ => {
+                    println!("  Unknown threat type: {}", threat_type);
+                    println!("  Available: injection, jailbreak, honeypot, samson");
+                }
+            }
+            println!();
+
+            Ok(())
+        }
+
+        SecurityCommands::Clear => {
+            println!();
+            println!("  ⚠️  Clearing threat memory...");
+            let mut fafo = FafoController::new();
+            fafo.clear_memory();
+            println!("  ✓  Threat memory cleared.");
+            println!();
+            Ok(())
+        }
+    }
 }

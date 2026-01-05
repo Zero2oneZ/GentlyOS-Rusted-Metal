@@ -1812,6 +1812,7 @@ dependencies = [
  "gently-mcp",
  "gently-network",
  "gently-search",
+ "gently-security",
  "gently-sploit",
  "gently-visual",
  "hex",

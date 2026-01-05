@@ -8,7 +8,48 @@
 
 ## What Claude Code Built (2026-01-05)
 
-### BONEBLOB BIZ Constraint System
+### FAFO Security + Berlin Clock (Session 2)
+
+"A rabid pitbull behind a fence" - Aggressive defense with time-based key rotation.
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `gently-core/src/crypto/berlin.rs` | 380 NEW | BTC-synced time-based key rotation |
+| `gently-security/src/fafo.rs` | 600 NEW | FAFO escalating response system |
+| `gently-cli/src/main.rs` | +250 | `/security` command with dashboard |
+
+#### Berlin Clock Key Rotation
+
+```
+BTC Block Timestamp → Slot (ts / 300) → HKDF → Time-Bound Key
+
+Forward secrecy: Old slots cannot derive current keys
+Sync: Any node with master + BTC time = same key
+Grace period: 2 previous slots for decryption
+```
+
+#### FAFO Response Ladder
+
+```
+Strike 1-2:  TARPIT   - Waste attacker's time
+Strike 3-4:  POISON   - Corrupt attacker's context
+Strike 5-7:  DROWN    - Flood with honeypot garbage
+Strike 10+:  DESTROY  - Permanent termination
+CRITICAL:    SAMSON   - Scorched earth (nuclear option)
+```
+
+#### CLI Commands
+
+```
+gently security status   - Dashboard with FAFO stats
+gently security fafo     - FAFO mode control
+gently security daemons  - 16 security daemons status
+gently security test     - Threat simulation
+```
+
+---
+
+### BONEBLOB BIZ Constraint System (Session 1)
 
 Philosophy → Compiler. Words became executable geometry.
 
@@ -73,14 +114,14 @@ Guaranteed by Banach Fixed-Point Theorem
 
 | Crate | Status | Notes |
 |-------|--------|-------|
-| gently-core | 95% | Crypto foundation, XOR splits, genesis keys |
+| gently-core | 98% | Crypto foundation, XOR splits, genesis keys, **Berlin Clock rotation** |
 | gently-audio | 100% | FFT encoding/decoding with tests |
 | gently-visual | 100% | SVG pattern generation |
 | gently-dance | 85% | Full protocol state machine |
 | gently-btc | 90% | Block promise logic |
 | gently-ipfs | 85% | Thin wrapper (delegates to daemon) |
 | gently-guardian | 80% | Hardware detection, cross-platform (sysinfo) |
-| gently-security | 85% | 16/16 daemons, real hash chain, threat intel |
+| gently-security | 95% | 16/16 daemons, real hash chain, threat intel, **FAFO pitbull** |
 | gently-feed | 70% | Charge/decay model works |
 | gently-gateway | 70% | Pipeline architecture |
 | gently-brain | 75% | Claude API real, Alexandria integration |

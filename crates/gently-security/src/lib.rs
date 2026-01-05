@@ -42,6 +42,7 @@ pub mod honeypot;
 pub mod controller;
 pub mod daemons;
 pub mod agentic;
+pub mod fafo;
 
 pub use distiller::{TokenDistiller, TokenType, DistilledToken};
 pub use limiter::{RateLimiter, RateLimitLayer, RateLimitResult};
@@ -51,6 +52,7 @@ pub use honeypot::{HoneypotSystem, Honeypot, HoneypotType};
 pub use controller::{SecurityController, DefenseMode, SecurityEvent};
 pub use daemons::*;
 pub use agentic::AgenticSecurityController;
+pub use fafo::{FafoController, FafoMode, FafoResponse, FafoStats, PoisonPayload, SamsonConfig};
 
 use thiserror::Error;
 
