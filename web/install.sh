@@ -5,7 +5,7 @@
 set -e
 
 VERSION="1.0.0"
-GITHUB_REPO="gentlyos/gentlyos"
+GITHUB_REPO="Zero2oneZ/GentlyOS-Rusted-Metal"
 INSTALL_DIR="/usr/local/bin"
 
 # Colors
