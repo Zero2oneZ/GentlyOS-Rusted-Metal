@@ -1,8 +1,59 @@
 # GentlyOS - Claude Context
 
-**Last Updated**: 2026-01-04
-**Lines of Code**: ~35,000+
-**Crates**: 18 Rust crates (Solana disabled)
+**Last Updated**: 2026-01-05
+**Lines of Code**: ~72,000+
+**Crates**: 21 Rust crates + TUI (Solana disabled)
+
+---
+
+## What Claude Code Built (2026-01-05)
+
+### BONEBLOB BIZ Constraint System
+
+Philosophy → Compiler. Words became executable geometry.
+
+```
+BONE BLOB BIZ CIRCLE PIN
+         ↓
+constraint.rs + tesseract.rs
+```
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `gently-search/src/constraint.rs` | 325 NEW | Constraint optimization engine |
+| `gently-alexandria/src/tesseract.rs` | +57 | BONEBLOB methods on 8-face hypercube |
+| `gently-guardian/src/lib.rs` | +101 | Platform detection (macOS/Windows/Linux) |
+| `gentlyos-tui/` | 5,693 NEW | Full terminal UI with BONEBLOB integration |
+
+### The Math
+
+```
+Intelligence = Capability × Constraint / Search Space
+
+BONES   → Preprompt constraints (immutable rules)
+CIRCLE  → 70% elimination per pass (via negativa)
+PIN     → Solution finder in bounded space
+BIZ     → Solution → new constraint (fixed-point iteration)
+
+Convergence: 5 passes × 70% elimination = 0.24% remaining
+Guaranteed by Banach Fixed-Point Theorem
+```
+
+### Key Integration Points
+
+1. **Tesseract `eliminated` face** (dims 48-95) stores "What it ISN'T"
+2. **ConstraintBuilder** bridges Alexandria graph → BONEBLOB constraints
+3. **72-domain router** feeds domain context to constraint system
+4. **LlmWorker** optionally routes through BONEBLOB pipeline
+
+### TUI Commands
+
+```
+/boneblob on|off  - Toggle constraint optimization
+/boneblob         - Show pipeline status
+/provider [name]  - Switch LLM (claude/gpt/deepseek/grok/ollama)
+/status           - System + BONEBLOB stats
+```
 
 ---
 
@@ -37,11 +88,12 @@
 | gently-network | 60% | Visualization works |
 | gently-architect | 55% | SQLite works, UI stubbed |
 | gently-mcp | 50% | Server ready, handlers missing |
-| gently-search | 70% | Alexandria routing, Tesseract projection |
-| gently-alexandria | 75% | Graph + Tesseract work, persistence |
+| gently-search | 80% | Alexandria routing, Tesseract projection, **BONEBLOB constraints** |
+| gently-alexandria | 85% | Graph + Tesseract work, persistence, **elimination methods** |
 | gently-sploit | 20% | Framework only |
 | gently-sim | 80% | SIM card security: filesystem, applets, OTA, Simjacker |
 | gently-spl | DISABLED | Solana version conflicts |
+| **gentlyos-tui** | **90%** | **Terminal UI: 6 panels, 7 LLM providers, BONEBLOB pipeline** |
 
 ---
 
