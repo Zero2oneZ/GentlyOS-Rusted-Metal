@@ -1,12 +1,45 @@
 # GentlyOS - Claude Context
 
 **Last Updated**: 2026-01-05
-**Lines of Code**: ~75,000+
-**Crates**: 22 Rust crates + TUI (Solana disabled)
+**Lines of Code**: ~77,000+
+**Crates**: 23 Rust crates + TUI (Solana disabled)
 
 ---
 
 ## What Claude Code Built (2026-01-05)
+
+### ONE SCENE Web GUI (Session 5)
+
+Premium Alexandria GUI - HTMX + Axum for paid users.
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `gently-web/src/templates.rs` | 1,128 | ONE SCENE HTML templates |
+| `gently-web/src/handlers.rs` | 402 | Route handlers + Alexandria API |
+| `gently-web/src/main.rs` | 122 | Web server binary |
+| `gently-web/src/state.rs` | 122 | Application state |
+| `gently-web/src/lib.rs` | 83 | Router setup |
+| `gently-web/src/routes.rs` | 48 | Route definitions |
+
+#### Features
+
+- **ONE SCENE Architecture**: Single adaptive interface, no page navigation
+- **HTMX Reactivity**: Server-driven updates without JS framework
+- **Alexandria Integration**: Graph visualization, BBBCP queries, Tesseract view, 5W dimensions
+- **Living Feed**: Charge/decay items with boost interaction
+- **Chat Interface**: Placeholder for LLM integration
+- **Security Panel**: Real-time security events
+
+#### Alexandria Premium Panels
+
+| Panel | Route | Function |
+|-------|-------|----------|
+| Graph | `/htmx/alexandria/graph` | Knowledge graph visualization |
+| BBBCP | `/htmx/alexandria/bbbcp` | BONE/CIRCLE/BLOB query interface |
+| Tesseract | `/htmx/alexandria/tesseract` | 8D hypercube face visualization |
+| 5W Query | `/htmx/alexandria/5w` | WHO/WHAT/WHERE/WHEN/WHY collapse |
+
+---
 
 ### Inference Quality Mining (Session 3)
 
@@ -197,6 +230,7 @@ Guaranteed by Banach Fixed-Point Theorem
 | gently-sploit | 20% | Framework only |
 | gently-sim | 80% | SIM card security: filesystem, applets, OTA, Simjacker |
 | **gently-inference** | **90%** | **Inference quality mining: decompose, score, cluster, optimize** |
+| **gently-web** | **85%** | **ONE SCENE Web GUI: HTMX + Axum, Alexandria integration** |
 | gently-spl | DISABLED | Solana version conflicts |
 | **gentlyos-tui** | **90%** | **Terminal UI: 6 panels, 7 LLM providers, BONEBLOB pipeline** |
 
@@ -341,6 +375,7 @@ Built-in LLM security patterns (28 indicators):
 | gently-alexandria | Distributed knowledge mesh, Tesseract |
 | gently-sim | SIM card security monitoring |
 | **gently-inference** | **Inference quality mining + optimization** |
+| **gently-web** | **ONE SCENE Web GUI for paid users** |
 
 ---
 

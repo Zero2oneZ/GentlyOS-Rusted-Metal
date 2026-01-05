@@ -1,0 +1,37 @@
+[package]
+name = "gently-web"
+version = "1.0.0"
+edition = "2021"
+description = "GentlyOS ONE SCENE Web GUI - HTMX + SVG adaptive interface"
+license = "MIT"
+
+[dependencies]
+# Web server
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace", "cors", "fs"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# GentlyOS crates
+gently-core.workspace = true
+gently-feed = { path = "../gently-feed" }
+gently-search = { path = "../gently-search" }
+gently-security = { path = "../gently-security" }
+gently-brain = { path = "../gently-brain" }
+gently-visual = { path = "../gently-visual" }
+gently-alexandria = { path = "../gently-alexandria" }
+
+# Utilities
+uuid.workspace = true
+chrono.workspace = true
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

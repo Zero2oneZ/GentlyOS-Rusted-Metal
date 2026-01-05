@@ -23,6 +23,7 @@ members = [
     "crates/gently-sim",
     "crates/gently-inference",
     "crates/gently-micro",
+    "crates/gently-web",
     "gentlyos-tui",
     # "crates/gently-spl",  # Disabled: Solana dependency version conflicts
     # "crates/gently-py",   # Disabled: PyO3 doesn't support musl-linux (Alpine)
