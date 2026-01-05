@@ -15,7 +15,7 @@ gently-btc.workspace = true
 tokio.workspace = true
 
 # HTTP
-reqwest = { version = "0.11", features = ["json", "stream"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
 hyper.workspace = true
 
 # Serialization
