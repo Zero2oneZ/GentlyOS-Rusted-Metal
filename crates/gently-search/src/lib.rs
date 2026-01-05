@@ -35,6 +35,7 @@ pub mod router;
 pub mod thought;
 pub mod wormhole;
 pub mod alexandria;
+pub mod constraint;
 
 pub use domain::{Domain, DomainRouter};
 pub use index::ThoughtIndex;
@@ -42,6 +43,7 @@ pub use router::{ContextRouter, SearchResult};
 pub use thought::{Shape, Thought, ThoughtKind};
 pub use wormhole::{Wormhole, WormholeDetector};
 pub use alexandria::{AlexandriaSearch, AlexandriaSearchStats, SearchResults};
+pub use constraint::{ConstraintBuilder, ConstraintRule, ConstraintSource, ConstraintStats};
 
 /// Result type for gently-search operations
 pub type Result<T> = std::result::Result<T, Error>;

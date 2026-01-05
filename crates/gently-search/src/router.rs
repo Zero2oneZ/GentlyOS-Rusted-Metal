@@ -41,7 +41,8 @@ pub enum MatchReason {
 
 /// Context-aware search router
 pub struct ContextRouter {
-    domain_router: DomainRouter,
+    /// Domain router for 72-domain semantic routing
+    pub domain_router: DomainRouter,
     max_results: usize,
     enable_wormholes: bool,
     enable_feed_boost: bool,

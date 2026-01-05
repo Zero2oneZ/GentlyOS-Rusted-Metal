@@ -2,20 +2,32 @@
 //!
 //! Store API keys encrypted in IPFS, retrieve via tool calls.
 //! Keys are encrypted with user's genesis key - only you can decrypt.
+//!
+//! ## Security
+//! - Uses ChaCha20-Poly1305 authenticated encryption (AEAD)
+//! - Each entry has a unique nonce (never reused)
+//! - Tampering is detected via Poly1305 MAC
+//! - Keys derived using HKDF from genesis key + service + salt
 
 use crate::{GenesisKey, Result, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use chacha20poly1305::{
+    aead::{Aead, KeyInit},
+    ChaCha20Poly1305, Nonce,
+};
 
 /// Encrypted key entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultEntry {
     /// Service name (e.g., "anthropic", "openai", "github")
     pub service: String,
-    /// Encrypted API key (XOR with derived key)
+    /// Encrypted API key (ChaCha20-Poly1305 authenticated ciphertext)
     pub encrypted_key: Vec<u8>,
     /// Salt used for key derivation
     pub salt: [u8; 16],
+    /// Nonce for ChaCha20-Poly1305 (unique per encryption)
+    pub nonce: [u8; 12],
     /// Optional metadata
     pub metadata: Option<VaultMetadata>,
     /// Created timestamp
@@ -83,22 +95,27 @@ impl KeyVault {
 
     /// Add or update a key
     pub fn set(&mut self, service: &str, api_key: &str, metadata: Option<VaultMetadata>) {
-        use rand::RngCore;
-
-        // Generate salt
+        // Generate salt and nonce using OS entropy
         let mut salt = [0u8; 16];
-        rand::thread_rng().fill_bytes(&mut salt);
+        let mut nonce_bytes = [0u8; 12];
+        getrandom::getrandom(&mut salt).expect("OS entropy source failed");
+        getrandom::getrandom(&mut nonce_bytes).expect("OS entropy source failed");
 
         // Derive encryption key from genesis + service + salt
         let derived_key = self.derive_key(service, &salt);
 
-        // XOR encrypt the API key
-        let encrypted = xor_encrypt(api_key.as_bytes(), &derived_key);
+        // Encrypt with ChaCha20-Poly1305 (authenticated encryption)
+        let cipher = ChaCha20Poly1305::new_from_slice(&derived_key)
+            .expect("32 bytes is valid key size");
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let encrypted = cipher.encrypt(nonce, api_key.as_bytes())
+            .expect("Encryption should not fail with valid inputs");
 
         let entry = VaultEntry {
             service: service.to_string(),
             encrypted_key: encrypted,
             salt,
+            nonce: nonce_bytes,
             metadata,
             created_at: chrono::Utc::now().timestamp(),
             last_accessed: None,
@@ -108,15 +125,18 @@ impl KeyVault {
     }
 
     /// Get a decrypted key
-    /// Get a decrypted key
     pub fn get(&mut self, service: &str) -> Option<String> {
-        let (salt, encrypted) = {
+        let (salt, nonce_bytes, encrypted) = {
             let entry = self.manifest.entries.get(service)?;
-            (entry.salt.clone(), entry.encrypted_key.clone())
+            (entry.salt, entry.nonce, entry.encrypted_key.clone())
         };
 
         let derived_key = self.derive_key(service, &salt);
-        let decrypted = xor_encrypt(&encrypted, &derived_key);
+
+        // Decrypt with ChaCha20-Poly1305 (authenticated decryption)
+        let cipher = ChaCha20Poly1305::new_from_slice(&derived_key).ok()?;
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let decrypted = cipher.decrypt(nonce, encrypted.as_ref()).ok()?;
 
         if let Some(entry) = self.manifest.entries.get_mut(service) {
             entry.last_accessed = Some(chrono::Utc::now().timestamp());
@@ -198,9 +218,10 @@ impl KeyVault {
         key
     }
 
-    // Internal: sign manifest
+    // Internal: sign manifest using HMAC-SHA256
     fn sign_manifest(&mut self) {
         use sha2::{Sha256, Digest};
+        use hmac::{Hmac, Mac, digest::KeyInit};
 
         let mut hasher = Sha256::new();
         // Sort by key to ensure deterministic ordering
@@ -211,19 +232,22 @@ impl KeyVault {
             hasher.update(service.as_bytes());
             hasher.update(&entry.encrypted_key);
         }
-        let hash = hasher.finalize();
+        let content_hash = hasher.finalize();
 
-        // Sign with genesis key (simple HMAC-like)
-        let mut sig_hasher = Sha256::new();
-        sig_hasher.update(self.genesis.as_bytes());
-        sig_hasher.update(&hash);
-        self.manifest.signature = sig_hasher.finalize().to_vec();
+        // Sign with proper HMAC-SHA256
+        type HmacSha256 = Hmac<Sha256>;
+        let mut mac = <HmacSha256 as KeyInit>::new_from_slice(self.genesis.as_bytes())
+            .expect("HMAC can take key of any size");
+        mac.update(&content_hash);
+        self.manifest.signature = mac.finalize().into_bytes().to_vec();
     }
 
-    // Internal: verify signature
+    // Internal: verify signature using constant-time comparison
     fn verify_signature(&self) -> bool {
         use sha2::{Sha256, Digest};
+        use hmac::{Hmac, Mac, digest::KeyInit};
 
+        // Compute expected signature using proper HMAC
         let mut hasher = Sha256::new();
         // Sort by key to ensure deterministic ordering
         let mut keys: Vec<_> = self.manifest.entries.keys().collect();
@@ -233,23 +257,17 @@ impl KeyVault {
             hasher.update(service.as_bytes());
             hasher.update(&entry.encrypted_key);
         }
-        let hash = hasher.finalize();
+        let content_hash = hasher.finalize();
 
-        let mut sig_hasher = Sha256::new();
-        sig_hasher.update(self.genesis.as_bytes());
-        sig_hasher.update(&hash);
-        let expected = sig_hasher.finalize().to_vec();
+        // Use HMAC for proper signature verification
+        type HmacSha256 = Hmac<Sha256>;
+        let mut mac = <HmacSha256 as KeyInit>::new_from_slice(self.genesis.as_bytes())
+            .expect("HMAC can take key of any size");
+        mac.update(&content_hash);
 
-        self.manifest.signature == expected
+        // Constant-time verification to prevent timing attacks
+        mac.verify_slice(&self.manifest.signature).is_ok()
     }
-}
-
-/// XOR encrypt/decrypt (symmetric)
-fn xor_encrypt(data: &[u8], key: &[u8; 32]) -> Vec<u8> {
-    data.iter()
-        .enumerate()
-        .map(|(i, &b)| b ^ key[i % 32])
-        .collect()
 }
 
 /// Well-known service configurations

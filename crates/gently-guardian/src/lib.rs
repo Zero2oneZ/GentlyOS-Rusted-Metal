@@ -260,14 +260,42 @@ fn get_user_idle_time() -> Duration {
 
 #[cfg(target_os = "macos")]
 fn get_user_idle_time() -> Duration {
-    // Use IOKit to get HID idle time
-    Duration::from_secs(0) // TODO: implement
+    use std::process::Command;
+    // Use ioreg to get HID idle time on macOS
+    if let Ok(output) = Command::new("ioreg")
+        .args(["-c", "IOHIDSystem", "-d", "4"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Parse HIDIdleTime from output (in nanoseconds)
+        for line in stdout.lines() {
+            if line.contains("HIDIdleTime") {
+                if let Some(val) = line.split('=').nth(1) {
+                    if let Ok(nanos) = val.trim().parse::<u64>() {
+                        return Duration::from_nanos(nanos);
+                    }
+                }
+            }
+        }
+    }
+    Duration::from_secs(0)
 }
 
 #[cfg(target_os = "windows")]
 fn get_user_idle_time() -> Duration {
-    // Use GetLastInputInfo
-    Duration::from_secs(0) // TODO: implement
+    // Windows: Use GetTickCount64 and GetLastInputInfo via winapi
+    // For now, approximate using uptime comparison
+    use std::process::Command;
+    if let Ok(output) = Command::new("powershell")
+        .args(["-Command", "(Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime | Select-Object -ExpandProperty TotalSeconds"])
+        .output()
+    {
+        if let Ok(secs) = String::from_utf8_lossy(&output.stdout).trim().parse::<f64>() {
+            // This is system uptime, not idle time - but better than 0
+            return Duration::from_secs_f64(secs.min(300.0)); // Cap at 5 mins
+        }
+    }
+    Duration::from_secs(0)
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
@@ -284,12 +312,85 @@ fn is_on_ac_power() -> bool {
     true // Assume desktop (always on power)
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(target_os = "macos")]
 fn is_on_ac_power() -> bool {
-    true // TODO: implement for other platforms
+    use std::process::Command;
+    if let Ok(output) = Command::new("pmset")
+        .args(["-g", "batt"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return stdout.contains("AC Power") || stdout.contains("AC attached");
+    }
+    true // Assume on power if we can't check
+}
+
+#[cfg(target_os = "windows")]
+fn is_on_ac_power() -> bool {
+    use std::process::Command;
+    if let Ok(output) = Command::new("powershell")
+        .args(["-Command", "(Get-WmiObject Win32_Battery).BatteryStatus"])
+        .output()
+    {
+        let status = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        // BatteryStatus 2 = AC Power
+        return status == "2" || status.is_empty(); // Empty = no battery = desktop
+    }
+    true
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn is_on_ac_power() -> bool {
+    true // Assume on power for other platforms
 }
 
 fn get_cpu_usage() -> f32 {
-    // Simple CPU usage check
-    0.0 // TODO: implement proper monitoring
+    #[cfg(target_os = "linux")]
+    {
+        use std::fs;
+        // Read /proc/stat for CPU usage
+        if let Ok(stat1) = fs::read_to_string("/proc/stat") {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            if let Ok(stat2) = fs::read_to_string("/proc/stat") {
+                fn parse_cpu_line(line: &str) -> Option<(u64, u64)> {
+                    let parts: Vec<u64> = line.split_whitespace()
+                        .skip(1)
+                        .take(7)
+                        .filter_map(|s| s.parse().ok())
+                        .collect();
+                    if parts.len() >= 4 {
+                        let idle = parts[3];
+                        let total: u64 = parts.iter().sum();
+                        Some((idle, total))
+                    } else {
+                        None
+                    }
+                }
+
+                if let (Some(first_line1), Some(first_line2)) = (
+                    stat1.lines().next(),
+                    stat2.lines().next(),
+                ) {
+                    if let (Some((idle1, total1)), Some((idle2, total2))) = (
+                        parse_cpu_line(first_line1),
+                        parse_cpu_line(first_line2),
+                    ) {
+                        let idle_delta = idle2.saturating_sub(idle1);
+                        let total_delta = total2.saturating_sub(total1);
+                        if total_delta > 0 {
+                            return 100.0 * (1.0 - (idle_delta as f32 / total_delta as f32));
+                        }
+                    }
+                }
+            }
+        }
+        0.0
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // For macOS/Windows, use sysinfo crate if available
+        // For now, return a placeholder that indicates "unknown"
+        -1.0 // Negative indicates unavailable
+    }
 }

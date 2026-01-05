@@ -2,10 +2,15 @@
 //!
 //! The Genesis Key is generated once and stored securely on the device.
 //! All other keys (session, project, lock) are derived from it.
+//!
+//! ## Security Notes
+//! - Key generation uses OS entropy via `getrandom`
+//! - Seed-based derivation uses Argon2id with strong parameters
+//! - All keys are zeroized on drop
 
-use rand::RngCore;
 use sha2::{Sha256, Digest};
 use zeroize::Zeroize;
+use argon2::{Argon2, Algorithm, Version, Params};
 
 
 /// The root key from which all others derive.
@@ -31,10 +36,11 @@ impl Drop for GenesisKey {
 }
 
 impl GenesisKey {
-    /// Generate a new random genesis key using system entropy
+    /// Generate a new random genesis key using OS entropy (cryptographically secure)
     pub fn generate() -> Self {
         let mut inner = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut inner);
+        // Use getrandom for cryptographically secure randomness
+        getrandom::getrandom(&mut inner).expect("OS entropy source failed");
         Self { inner }
     }
 
@@ -44,14 +50,33 @@ impl GenesisKey {
     }
 
     /// Create from a seed phrase + salt (for human-recoverable keys)
+    ///
+    /// Uses Argon2id with strong parameters to resist brute-force attacks:
+    /// - Memory: 64 MiB
+    /// - Iterations: 3
+    /// - Parallelism: 4
+    ///
+    /// This makes dictionary attacks computationally expensive.
     pub fn from_seed(seed: &str, salt: &str) -> Self {
-        use hkdf::Hkdf;
-        use sha2::Sha256;
+        // Argon2id parameters: 64 MiB memory, 3 iterations, 4 lanes
+        // These parameters provide strong protection against GPU attacks
+        let params = Params::new(
+            64 * 1024,  // 64 MiB memory cost
+            3,          // 3 iterations (time cost)
+            4,          // 4 parallel lanes
+            Some(32),   // 32 byte output
+        ).expect("Valid Argon2 parameters");
 
-        let hk = Hkdf::<Sha256>::new(Some(salt.as_bytes()), seed.as_bytes());
+        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+        // Generate a proper salt by hashing the user salt with a domain separator
+        let mut salt_hash = [0u8; 16];
+        let salt_digest = Sha256::digest(format!("gently-genesis-salt-v2:{}", salt).as_bytes());
+        salt_hash.copy_from_slice(&salt_digest[..16]);
+
         let mut inner = [0u8; 32];
-        hk.expand(b"gently-genesis-v1", &mut inner)
-            .expect("32 bytes is valid for HKDF");
+        argon2.hash_password_into(seed.as_bytes(), &salt_hash, &mut inner)
+            .expect("Argon2 hashing failed");
 
         Self { inner }
     }

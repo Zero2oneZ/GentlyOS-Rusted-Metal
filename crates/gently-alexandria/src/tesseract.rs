@@ -223,6 +223,63 @@ impl HyperPosition {
         self.face_embeddings = Some(faces);
         self
     }
+
+    // === BONEBLOB BIZ Constraint Methods ===
+
+    /// Add an elimination constraint (CIRCLE pass result)
+    pub fn add_elimination(&mut self, eliminated_concept: ConceptId) {
+        if !self.eliminated.contains(&eliminated_concept) {
+            self.eliminated.push(eliminated_concept);
+        }
+    }
+
+    /// Add multiple eliminations at once
+    pub fn add_eliminations(&mut self, concepts: impl IntoIterator<Item = ConceptId>) {
+        for c in concepts {
+            self.add_elimination(c);
+        }
+    }
+
+    /// Check if a concept has been eliminated
+    pub fn is_eliminated(&self, concept: &ConceptId) -> bool {
+        self.eliminated.contains(concept)
+    }
+
+    /// Get all eliminations as constraint strings (for BONES preprompt)
+    pub fn get_elimination_constraints(&self) -> Vec<String> {
+        self.eliminated
+            .iter()
+            .map(|c| format!("NOT: {:x}", c.0[0] as u32)) // Short form of hash
+            .collect()
+    }
+
+    /// Calculate remaining search space as ratio (0.0-1.0)
+    /// Based on eliminations vs total potential + actual
+    pub fn search_space_remaining(&self) -> f32 {
+        let total = self.potential.len() + self.actual.len();
+        if total == 0 {
+            return 1.0; // No known space to eliminate from
+        }
+        let eliminated = self.eliminated.len();
+        1.0 - (eliminated as f32 / (total + eliminated) as f32)
+    }
+
+    /// Check if this position has converged (< 1% search space remaining)
+    pub fn has_converged(&self) -> bool {
+        self.search_space_remaining() < 0.01
+    }
+
+    /// Get the elimination face embedding (dims 48-95)
+    pub fn elimination_embedding(&self) -> Option<&[f32]> {
+        self.face_embeddings.as_ref().map(|f| f.eliminated.as_slice())
+    }
+
+    /// Merge eliminations from another position (for accumulation)
+    pub fn merge_eliminations(&mut self, other: &HyperPosition) {
+        for e in &other.eliminated {
+            self.add_elimination(*e);
+        }
+    }
 }
 
 /// Temporal context for a concept
