@@ -653,6 +653,148 @@ impl SemanticTesseract {
         (added, removed)
     }
 
+    // ========== 5W Dimensional Query Helpers ==========
+
+    /// Map a 5W dimension name to the corresponding HyperFace
+    pub fn dimension_to_face(dimension: &str) -> Option<HyperFace> {
+        match dimension.to_lowercase().as_str() {
+            "who" => Some(HyperFace::Observer),
+            "what" => Some(HyperFace::Actual),
+            "where" => Some(HyperFace::Context),
+            "when" => Some(HyperFace::Temporal),
+            "why" => Some(HyperFace::Purpose),
+            "how" => Some(HyperFace::Method),
+            "is" | "actual" => Some(HyperFace::Actual),
+            "isnt" | "isn't" | "eliminated" => Some(HyperFace::Eliminated),
+            "potential" | "could" => Some(HyperFace::Potential),
+            _ => None,
+        }
+    }
+
+    /// Map a HyperFace to its 5W dimension name
+    pub fn face_to_dimension(face: HyperFace) -> &'static str {
+        match face {
+            HyperFace::Observer => "who",
+            HyperFace::Actual => "what",
+            HyperFace::Context => "where",
+            HyperFace::Temporal => "when",
+            HyperFace::Purpose => "why",
+            HyperFace::Method => "how",
+            HyperFace::Eliminated => "isnt",
+            HyperFace::Potential => "could",
+        }
+    }
+
+    /// Query concepts matching a 5W dimension value
+    /// Example: query_5w("who", "developers") -> all concepts where observer = "developers"
+    pub fn query_5w(&self, dimension: &str, value: &str) -> Vec<ConceptId> {
+        match Self::dimension_to_face(dimension) {
+            Some(HyperFace::Observer) => self.concepts_for_observer(value),
+            Some(HyperFace::Context) => self.concepts_in_context(value),
+            Some(HyperFace::Temporal) => self.concepts_in_era(value),
+            Some(HyperFace::Actual) => self.concepts_with_actual(value),
+            Some(HyperFace::Purpose) => self.concepts_with_purpose(value),
+            Some(HyperFace::Method) => self.concepts_with_method(value),
+            Some(HyperFace::Eliminated) => self.concepts_with_elimination(value),
+            Some(HyperFace::Potential) => self.concepts_with_potential(value),
+            None => Vec::new(),
+        }
+    }
+
+    /// Get all concepts that have a specific actual value (by string match)
+    fn concepts_with_actual(&self, value: &str) -> Vec<ConceptId> {
+        let target = ConceptId::from_concept(value);
+        self.positions.iter()
+            .filter(|(_, positions)| {
+                positions.iter().any(|p| p.actual.contains(&target))
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Get all concepts that have a specific purpose (by string match)
+    fn concepts_with_purpose(&self, value: &str) -> Vec<ConceptId> {
+        let target = ConceptId::from_concept(value);
+        self.positions.iter()
+            .filter(|(_, positions)| {
+                positions.iter().any(|p| p.purpose.contains(&target))
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Get all concepts that use a specific method
+    fn concepts_with_method(&self, value: &str) -> Vec<ConceptId> {
+        let target = ConceptId::from_concept(value);
+        self.positions.iter()
+            .filter(|(_, positions)| {
+                positions.iter().any(|p| p.method.contains(&target))
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Get all concepts where something has been eliminated
+    fn concepts_with_elimination(&self, value: &str) -> Vec<ConceptId> {
+        let target = ConceptId::from_concept(value);
+        self.positions.iter()
+            .filter(|(_, positions)| {
+                positions.iter().any(|p| p.eliminated.contains(&target))
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Get all concepts with a specific potential
+    fn concepts_with_potential(&self, value: &str) -> Vec<ConceptId> {
+        let target = ConceptId::from_concept(value);
+        self.positions.iter()
+            .filter(|(_, positions)| {
+                positions.iter().any(|p| p.potential.contains(&target))
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Multi-dimensional 5W query - find concepts matching ALL specified dimensions
+    /// Example: query_5w_multi(&[("who", "developers"), ("where", "tech")])
+    ///          -> concepts where observer=developers AND context=tech
+    pub fn query_5w_multi(&self, dimensions: &[(&str, &str)]) -> Vec<ConceptId> {
+        if dimensions.is_empty() {
+            return Vec::new();
+        }
+
+        // Start with first dimension
+        let (first_dim, first_val) = dimensions[0];
+        let mut results: std::collections::HashSet<ConceptId> =
+            self.query_5w(first_dim, first_val).into_iter().collect();
+
+        // Intersect with remaining dimensions
+        for (dim, val) in &dimensions[1..] {
+            let candidates: std::collections::HashSet<ConceptId> =
+                self.query_5w(dim, val).into_iter().collect();
+            results = results.intersection(&candidates).copied().collect();
+        }
+
+        results.into_iter().collect()
+    }
+
+    /// Get all unique values for a 5W dimension
+    pub fn dimension_values(&self, dimension: &str) -> Vec<String> {
+        match Self::dimension_to_face(dimension) {
+            Some(HyperFace::Observer) => {
+                self.observer_index.keys().cloned().collect()
+            }
+            Some(HyperFace::Context) => {
+                self.context_index.keys().cloned().collect()
+            }
+            Some(HyperFace::Temporal) => {
+                self.temporal_index.keys().cloned().collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
     /// Convert an edge to a hypercube navigation
     pub fn edge_to_navigation(&self, edge: &AlexandriaEdge) -> HyperNavigation {
         let face = match &edge.kind {
@@ -1185,5 +1327,198 @@ mod tests {
         let (dominant, magnitude) = tesseract.dominant_face(&concept).unwrap();
         assert_eq!(dominant, HyperFace::Purpose);
         assert!(magnitude > 5.0); // sqrt(48 * 1.0^2) ≈ 6.9
+    }
+
+    // ========== 5W Dimensional Query Tests ==========
+
+    #[test]
+    fn test_dimension_to_face() {
+        assert_eq!(SemanticTesseract::dimension_to_face("who"), Some(HyperFace::Observer));
+        assert_eq!(SemanticTesseract::dimension_to_face("WHAT"), Some(HyperFace::Actual));
+        assert_eq!(SemanticTesseract::dimension_to_face("Where"), Some(HyperFace::Context));
+        assert_eq!(SemanticTesseract::dimension_to_face("when"), Some(HyperFace::Temporal));
+        assert_eq!(SemanticTesseract::dimension_to_face("why"), Some(HyperFace::Purpose));
+        assert_eq!(SemanticTesseract::dimension_to_face("how"), Some(HyperFace::Method));
+        assert_eq!(SemanticTesseract::dimension_to_face("unknown"), None);
+    }
+
+    #[test]
+    fn test_face_to_dimension() {
+        assert_eq!(SemanticTesseract::face_to_dimension(HyperFace::Observer), "who");
+        assert_eq!(SemanticTesseract::face_to_dimension(HyperFace::Actual), "what");
+        assert_eq!(SemanticTesseract::face_to_dimension(HyperFace::Context), "where");
+        assert_eq!(SemanticTesseract::face_to_dimension(HyperFace::Temporal), "when");
+        assert_eq!(SemanticTesseract::face_to_dimension(HyperFace::Purpose), "why");
+    }
+
+    #[test]
+    fn test_query_5w() {
+        let mut tesseract = SemanticTesseract::new();
+
+        let rust = make_concept("rust");
+        let python = make_concept("python");
+
+        let pos_rust = HyperPosition {
+            concept: rust,
+            actual: vec![make_concept("systems programming")],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition {
+                era_tags: vec!["modern".to_string()],
+                ..Default::default()
+            },
+            observer: vec!["developers".to_string(), "systems programmers".to_string()],
+            context: vec!["low-level".to_string(), "safety".to_string()],
+            method: vec![make_concept("borrow checker")],
+            purpose: vec![make_concept("memory safety")],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        };
+
+        let pos_python = HyperPosition {
+            concept: python,
+            actual: vec![make_concept("scripting")],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition {
+                era_tags: vec!["modern".to_string()],
+                ..Default::default()
+            },
+            observer: vec!["developers".to_string(), "data scientists".to_string()],
+            context: vec!["high-level".to_string(), "ml".to_string()],
+            method: vec![],
+            purpose: vec![make_concept("simplicity")],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        };
+
+        tesseract.record_position(pos_rust);
+        tesseract.record_position(pos_python);
+
+        // Query WHO = "developers" - should get both
+        let devs = tesseract.query_5w("who", "developers");
+        assert!(devs.contains(&rust));
+        assert!(devs.contains(&python));
+
+        // Query WHO = "systems programmers" - should get only rust
+        let sys_devs = tesseract.query_5w("who", "systems programmers");
+        assert!(sys_devs.contains(&rust));
+        assert!(!sys_devs.contains(&python));
+
+        // Query WHERE = "ml" - should get only python
+        let ml = tesseract.query_5w("where", "ml");
+        assert!(!ml.contains(&rust));
+        assert!(ml.contains(&python));
+
+        // Query WHEN = "modern" - should get both
+        let modern = tesseract.query_5w("when", "modern");
+        assert!(modern.contains(&rust));
+        assert!(modern.contains(&python));
+    }
+
+    #[test]
+    fn test_query_5w_multi() {
+        let mut tesseract = SemanticTesseract::new();
+
+        let rust = make_concept("rust");
+        let python = make_concept("python");
+        let go = make_concept("go");
+
+        // Setup positions with overlapping dimensions
+        tesseract.record_position(HyperPosition {
+            concept: rust,
+            actual: vec![],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition::default(),
+            observer: vec!["google".to_string(), "systems".to_string()],
+            context: vec!["backend".to_string()],
+            method: vec![],
+            purpose: vec![],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        });
+
+        tesseract.record_position(HyperPosition {
+            concept: python,
+            actual: vec![],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition::default(),
+            observer: vec!["google".to_string(), "data".to_string()],
+            context: vec!["ml".to_string()],
+            method: vec![],
+            purpose: vec![],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        });
+
+        tesseract.record_position(HyperPosition {
+            concept: go,
+            actual: vec![],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition::default(),
+            observer: vec!["google".to_string(), "systems".to_string()],
+            context: vec!["backend".to_string()],
+            method: vec![],
+            purpose: vec![],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        });
+
+        // Multi-dimensional: WHO=google AND WHERE=backend -> rust, go
+        let results = tesseract.query_5w_multi(&[("who", "google"), ("where", "backend")]);
+        assert!(results.contains(&rust));
+        assert!(results.contains(&go));
+        assert!(!results.contains(&python));
+
+        // Multi-dimensional: WHO=google AND WHO=systems -> rust, go
+        let results2 = tesseract.query_5w_multi(&[("who", "google"), ("who", "systems")]);
+        assert!(results2.contains(&rust));
+        assert!(results2.contains(&go));
+        assert!(!results2.contains(&python));
+    }
+
+    #[test]
+    fn test_dimension_values() {
+        let mut tesseract = SemanticTesseract::new();
+
+        let rust = make_concept("rust");
+
+        tesseract.record_position(HyperPosition {
+            concept: rust,
+            actual: vec![],
+            eliminated: vec![],
+            potential: vec![],
+            temporal: TemporalPosition {
+                era_tags: vec!["2015+".to_string(), "modern".to_string()],
+                ..Default::default()
+            },
+            observer: vec!["mozilla".to_string(), "aws".to_string()],
+            context: vec!["systems".to_string(), "embedded".to_string()],
+            method: vec![],
+            purpose: vec![],
+            embedding: None,
+            face_embeddings: None,
+            recorded_at: Utc::now(),
+        });
+
+        let observers = tesseract.dimension_values("who");
+        assert!(observers.contains(&"mozilla".to_string()));
+        assert!(observers.contains(&"aws".to_string()));
+
+        let contexts = tesseract.dimension_values("where");
+        assert!(contexts.contains(&"systems".to_string()));
+        assert!(contexts.contains(&"embedded".to_string()));
+
+        let eras = tesseract.dimension_values("when");
+        assert!(eras.contains(&"2015+".to_string()));
+        assert!(eras.contains(&"modern".to_string()));
     }
 }

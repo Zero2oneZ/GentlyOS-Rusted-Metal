@@ -1,17 +1,17 @@
 [package]
-name = "gently-search"
+name = "gently-micro"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Thought Index - User-unique, context-routed search system"
+description = "Micro Infrastructure - Local intelligence layer mirroring the macro network"
 
 [dependencies]
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
 
-# Crypto (for thought hashing)
+# Crypto (for hashing)
 sha2 = { workspace = true }
 
 # Time
@@ -26,12 +26,20 @@ regex = { workspace = true }
 # Error handling
 thiserror = { workspace = true }
 
+# Hex encoding
+hex = { workspace = true }
+
+# Lazy initialization
+lazy_static = { workspace = true }
+
+# File system
+dirs = { workspace = true }
+
 # Internal crates
 gently-core = { workspace = true }
-gently-feed = { workspace = true }
 gently-alexandria = { workspace = true }
-# Note: gently-inference depends on gently-search, so we can't depend on it here
-# The BBBCP/chain modules are self-contained and work with inference via shared types
+gently-search = { workspace = true }
+gently-inference = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3.10"

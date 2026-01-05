@@ -1,0 +1,37 @@
+[package]
+name = "gently-inference"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Inference quality mining and optimization engine"
+
+[dependencies]
+gently-core.workspace = true
+gently-alexandria.workspace = true
+gently-search.workspace = true
+
+# Async
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+
+# Crypto (for content hashing)
+sha2.workspace = true
+
+# Utils
+uuid.workspace = true
+chrono.workspace = true
+regex.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = "3"

@@ -53,11 +53,13 @@ pub mod handler;
 pub mod protocol;
 pub mod server;
 pub mod tools;
+pub mod bbbcp_tools;
 
 pub use handler::McpHandler;
 pub use protocol::{McpRequest, McpResponse, Tool, ToolCall, ToolResult};
 pub use server::McpServer;
 pub use tools::{ToolRegistry, GentlyTool};
+pub use bbbcp_tools::register_bbbcp_tools;
 
 /// Result type for gently-mcp operations
 pub type Result<T> = std::result::Result<T, Error>;

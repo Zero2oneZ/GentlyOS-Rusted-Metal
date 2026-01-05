@@ -1926,6 +1926,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "gently-inference"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "dirs 5.0.1",
+ "gently-alexandria",
+ "gently-core",
+ "gently-search",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "gently-ipfs"
 version = "1.0.0"
 dependencies = [
@@ -1961,6 +1983,27 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-test",
+ "uuid",
+]
+
+[[package]]
+name = "gently-micro"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "dirs 5.0.1",
+ "gently-alexandria",
+ "gently-core",
+ "gently-inference",
+ "gently-search",
+ "hex",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 1.0.69",
  "uuid",
 ]
 

@@ -107,6 +107,9 @@ impl ToolRegistry {
         registry.register(Box::new(DanceInitiate));
         registry.register(Box::new(IdentityVerify));
 
+        // Register BBBCP/Alexandria tools
+        crate::bbbcp_tools::register_bbbcp_tools(&mut registry);
+
         registry
     }
 

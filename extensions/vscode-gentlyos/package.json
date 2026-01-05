@@ -1,0 +1,241 @@
+{
+  "name": "gentlyos",
+  "displayName": "GentlyOS",
+  "description": "Distributed intelligence for VS Code - BONEBLOB-optimized AI assistance with token security",
+  "version": "1.0.0",
+  "publisher": "gentlyos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gentlyos/gentlyos"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "AI",
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "llm",
+    "claude",
+    "boneblob",
+    "code-assistant",
+    "gentlyos"
+  ],
+  "icon": "media/icons/gentlyos.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gentlyos.chat",
+        "title": "GentlyOS: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "gentlyos.explain",
+        "title": "GentlyOS: Explain Code"
+      },
+      {
+        "command": "gentlyos.refactor",
+        "title": "GentlyOS: Suggest Refactoring"
+      },
+      {
+        "command": "gentlyos.test",
+        "title": "GentlyOS: Generate Tests"
+      },
+      {
+        "command": "gentlyos.boneblob.toggle",
+        "title": "GentlyOS: Toggle BONEBLOB",
+        "icon": "$(symbol-boolean)"
+      },
+      {
+        "command": "gentlyos.feed.show",
+        "title": "GentlyOS: Show Living Feed"
+      },
+      {
+        "command": "gentlyos.alexandria.search",
+        "title": "GentlyOS: Search Knowledge Graph"
+      },
+      {
+        "command": "gentlyos.security.status",
+        "title": "GentlyOS: Security Status"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "gentlyos.chat",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "gentlyos.explain",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "gentlyos.refactor",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "gentlyos.test",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
+      },
+      {
+        "command": "gentlyos.boneblob.toggle",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gentlyos",
+          "title": "GentlyOS",
+          "icon": "media/icons/gentlyos.svg"
+        }
+      ]
+    },
+    "views": {
+      "gentlyos": [
+        {
+          "type": "webview",
+          "id": "gentlyos.chat",
+          "name": "Chat"
+        },
+        {
+          "type": "webview",
+          "id": "gentlyos.feed",
+          "name": "Living Feed"
+        },
+        {
+          "id": "gentlyos.security",
+          "name": "Security"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gentlyos.explain",
+          "when": "editorHasSelection",
+          "group": "gentlyos@1"
+        },
+        {
+          "command": "gentlyos.refactor",
+          "when": "editorHasSelection",
+          "group": "gentlyos@2"
+        },
+        {
+          "command": "gentlyos.test",
+          "group": "gentlyos@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GentlyOS",
+      "properties": {
+        "gentlyos.provider": {
+          "type": "string",
+          "enum": ["claude", "gpt", "deepseek", "grok", "ollama", "lmstudio", "huggingface"],
+          "default": "claude",
+          "description": "LLM provider for AI features"
+        },
+        "gentlyos.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key (leave empty to use gently vault)"
+        },
+        "gentlyos.boneblob.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable BONEBLOB constraint optimization for token efficiency"
+        },
+        "gentlyos.boneblob.passes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of CIRCLE elimination passes (70% reduction per pass)"
+        },
+        "gentlyos.security.tokenWatchdog": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable token watchdog to detect leaked credentials"
+        },
+        "gentlyos.security.sanitizeResponses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sanitize LLM responses for prompt injection patterns"
+        },
+        "gentlyos.security.maskTokensInLogs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mask API keys and tokens in logs and output"
+        },
+        "gentlyos.mcp.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-start gently MCP server"
+        },
+        "gentlyos.mcp.port": {
+          "type": "number",
+          "default": 3000,
+          "description": "MCP server port"
+        },
+        "gentlyos.tokenLimits.maxRequest": {
+          "type": "number",
+          "default": 4096,
+          "description": "Maximum tokens per request"
+        },
+        "gentlyos.tokenLimits.maxResponse": {
+          "type": "number",
+          "default": 2048,
+          "description": "Maximum tokens in response"
+        },
+        "gentlyos.feed.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show feed temperature in status bar"
+        },
+        "gentlyos.telemetry.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable anonymous usage telemetry"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  }
+}

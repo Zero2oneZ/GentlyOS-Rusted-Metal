@@ -1,12 +1,75 @@
 # GentlyOS - Claude Context
 
 **Last Updated**: 2026-01-05
-**Lines of Code**: ~72,000+
-**Crates**: 21 Rust crates + TUI (Solana disabled)
+**Lines of Code**: ~75,000+
+**Crates**: 22 Rust crates + TUI (Solana disabled)
 
 ---
 
 ## What Claude Code Built (2026-01-05)
+
+### Inference Quality Mining (Session 3)
+
+Collective Inference Optimization - The network trains itself through USE.
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `gently-inference/src/step.rs` | 200 | InferenceStep, StepType (8 types) |
+| `gently-inference/src/score.rs` | 200 | Quality scoring formula |
+| `gently-inference/src/decompose.rs` | 250 | Response → Steps extraction |
+| `gently-inference/src/cluster.rs` | 300 | Semantic clustering (cosine sim) |
+| `gently-inference/src/aggregate.rs` | 250 | Cross-prompt step aggregation |
+| `gently-inference/src/optimize.rs` | 300 | Response synthesis |
+| `gently-inference/src/boneblob.rs` | 250 | BONEBLOB constraint generation |
+| `gently-inference/src/solana.rs` | 250 | GENOS rewards (stubbed) |
+
+#### The Quality Formula
+
+```
+quality = user_accept * 0.3
+        + outcome_success * 0.4
+        + chain_referenced * 0.2
+        + turning_point * 0.1
+
+THRESHOLD: 0.7 = USEFUL
+```
+
+#### Step Types
+
+| Type | GENOS Multiplier | Purpose |
+|------|-----------------|---------|
+| Conclude | 12x | Research synthesis |
+| Pattern | 10x | Creative insight |
+| Eliminate | 8x | BONEBLOB contribution |
+| Specific | 6x | Implementation detail |
+| Fact | 5x | Verified data |
+| Suggest | 4x | Ideas |
+| Correct | 3x | Bug fixes |
+| Guess | 1x | Low until validated |
+
+#### BONEBLOB Integration
+
+```
+High-quality (>=0.7) → BONES (constraints)
+    Eliminate → "MUST NOT: {content}"
+    Fact      → "ESTABLISHED: {content}"
+    Pattern   → "PATTERN: {content}"
+
+Low-quality (<0.7) → CIRCLE (eliminations)
+    Guess/Suggest → "AVOID: {content}"
+```
+
+#### Storage
+
+```
+~/.gently/inference/
+├── inferences.jsonl      # Query + response records
+├── steps.jsonl           # Individual reasoning steps
+├── clusters.json         # Semantic clustering state
+└── pending_genos.jsonl   # GENOS reward queue
+```
+
+---
 
 ### FAFO Security + Berlin Clock (Session 2)
 
@@ -133,6 +196,7 @@ Guaranteed by Banach Fixed-Point Theorem
 | gently-alexandria | 85% | Graph + Tesseract work, persistence, **elimination methods** |
 | gently-sploit | 20% | Framework only |
 | gently-sim | 80% | SIM card security: filesystem, applets, OTA, Simjacker |
+| **gently-inference** | **90%** | **Inference quality mining: decompose, score, cluster, optimize** |
 | gently-spl | DISABLED | Solana version conflicts |
 | **gentlyos-tui** | **90%** | **Terminal UI: 6 panels, 7 LLM providers, BONEBLOB pipeline** |
 
@@ -252,18 +316,18 @@ Built-in LLM security patterns (28 indicators):
 
 ---
 
-## 18 Crates Overview
+## 22 Crates Overview
 
 | Crate | Purpose |
 |-------|---------|
-| gently-core | Base types, genesis keys, XOR splits |
+| gently-core | Base types, genesis keys, XOR splits, Berlin Clock |
 | gently-btc | Bitcoin RPC, block anchoring |
 | gently-spl | Solana SPL (DISABLED) |
 | gently-dance | P2P dance protocol |
 | gently-audio | Audio FFT encoding |
 | gently-visual | SVG pattern generation |
 | gently-feed | Living feed with charge/decay |
-| gently-search | Alexandria-backed semantic search |
+| gently-search | Alexandria-backed semantic search, BONEBLOB |
 | gently-mcp | Model Context Protocol server |
 | gently-architect | Code generation, project trees |
 | gently-brain | LLM orchestration, knowledge graph |
@@ -272,10 +336,11 @@ Built-in LLM security patterns (28 indicators):
 | gently-cipher | Cryptographic utilities, cracking |
 | gently-sploit | Exploitation framework |
 | gently-gateway | API routing, pipelines |
-| gently-security | 16 security daemons |
+| gently-security | 16 daemons + FAFO pitbull |
 | gently-guardian | Free tier node, hardware validation |
-| gently-alexandria | Distributed knowledge mesh |
+| gently-alexandria | Distributed knowledge mesh, Tesseract |
 | gently-sim | SIM card security monitoring |
+| **gently-inference** | **Inference quality mining + optimization** |
 
 ---
 
@@ -295,7 +360,15 @@ Built-in LLM security patterns (28 indicators):
 ### Security
 - `crates/gently-security/src/daemons/foundation.rs` - Hash chain
 - `crates/gently-security/src/daemons/intel.rs` - Threat detection
+- `crates/gently-security/src/fafo.rs` - FAFO aggressive defense
 - `crates/gently-guardian/src/hardware.rs` - Cross-platform hw detection
+
+### Inference
+- `crates/gently-inference/src/lib.rs` - InferenceEngine main API
+- `crates/gently-inference/src/step.rs` - Step types and structures
+- `crates/gently-inference/src/score.rs` - Quality scoring formula
+- `crates/gently-inference/src/cluster.rs` - Semantic clustering
+- `crates/gently-inference/src/boneblob.rs` - Constraint generation
 
 ---
 

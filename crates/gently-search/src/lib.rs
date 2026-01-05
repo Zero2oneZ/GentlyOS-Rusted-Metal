@@ -36,6 +36,10 @@ pub mod thought;
 pub mod wormhole;
 pub mod alexandria;
 pub mod constraint;
+pub mod hyperspace;
+pub mod collapse;
+pub mod bbbcp;
+pub mod chain;
 
 pub use domain::{Domain, DomainRouter};
 pub use index::ThoughtIndex;
@@ -44,6 +48,10 @@ pub use thought::{Shape, Thought, ThoughtKind};
 pub use wormhole::{Wormhole, WormholeDetector};
 pub use alexandria::{AlexandriaSearch, AlexandriaSearchStats, SearchResults};
 pub use constraint::{ConstraintBuilder, ConstraintRule, ConstraintSource, ConstraintStats};
+pub use hyperspace::{Dimension, HyperspaceQuery, HyperspaceQueryBuilder, HyperspaceResult, NaturalLanguageExtractor};
+pub use collapse::{CollapseEngine, CollapseResult, CollapsedRow, CollapseProof, RowBuilder, TableOutput};
+pub use bbbcp::{BbbcpQuery, BbbcpQueryBuilder, BbbcpEngine, BbbcpResult, BbbcpOutput, Bone, Circle, BlobSearch, PinStrategy, ChainForward};
+pub use chain::{Conclusion, ConclusionChain, ConclusionChainer, ConclusionType, QuestionStep, InverseTrail};
 
 /// Result type for gently-search operations
 pub type Result<T> = std::result::Result<T, Error>;
